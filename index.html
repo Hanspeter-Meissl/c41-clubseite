@@ -47,6 +47,18 @@
     font: inherit; font-weight: 600; border: 0; border-radius: 20px; padding: 8px 18px;
     background: #D19B5D; color: #1d1d1f; cursor: pointer;
   }
+  /* Frage nach der Zahl am App-Symbol, unten über dem Rahmen. */
+  .zaehler {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 2; padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+    background: #154381; color: #fff; box-shadow: 0 -2px 12px rgba(0, 0, 0, .2);
+    font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  }
+  .zaehler p { margin: 0 0 4px; font-weight: 600; }
+  .zaehler small { display: block; margin-bottom: 10px; color: #D6DEEA; }
+  .zaehler div { display: flex; gap: 10px; }
+  .zaehler button { font: inherit; font-weight: 600; border: 0; border-radius: 20px; padding: 8px 18px; cursor: pointer; }
+  .zaehler .ja { background: #D19B5D; color: #1d1d1f; }
+  .zaehler .nein { background: transparent; color: #fff; border: 1px solid #8FA6C8; }
 </style>
 </head>
 <body>
@@ -63,6 +75,9 @@ const SPEICHER = 'c41-clubschluessel';
 const GERAET = 'c41-geraet';
 // Die Clubseite läuft bei Google in einem inneren Rahmen auf einer Adresse unter googleusercontent.com.
 const HERKUNFT = /^https:\/\/[\w-]+\.googleusercontent\.com$/;
+// Zahl der offenen Anmeldungen für das App-Symbol und der Merker, dass das Mitglied die Zahl nicht will.
+const ZAEHLER = 'c41-offen';
+const ZAEHLER_NEIN = 'c41-zaehler-nein';
 
 function speichern(club, name) {
   try { localStorage.setItem(name || SPEICHER, club); } catch (e) {}
@@ -129,12 +144,53 @@ if (club) {
     }
     return false;
   };
+  // Zahl am App-Symbol (seit 29. Oktober 2026): Die Clubseite meldet nach „Meine Übersicht“, wie viele Anmeldungen
+  // noch offen sind. Das iPhone zeigt die Zahl nur in der Web-App am Home-Bildschirm und erst, wenn Mitteilungen
+  // erlaubt sind. Danach fragt einmal ein Balken, sobald etwas offen ist; Mitteilungen schickt die Seite keine.
+  // Die Zahl stimmt jeweils für den Zeitpunkt, an dem die App zuletzt offen war.
+  const symbolZahl = 'setAppBadge' in navigator && 'Notification' in window;
+  const alsApp = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  const zahlSetzen = () => {
+    if (!symbolZahl || Notification.permission !== 'granted') return;
+    const n = Number(gespeichert(ZAEHLER)) || 0;
+    (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
+  };
+  const zahlWeg = () => {
+    vergessen(ZAEHLER);
+    zahlSetzen();
+  };
+  const zahlFragen = () => {
+    if (!symbolZahl || !alsApp || Notification.permission !== 'default' || gespeichert(ZAEHLER_NEIN)
+        || document.querySelector('.zaehler')) return;
+    document.body.insertAdjacentHTML('beforeend', `<div class="zaehler" role="dialog" aria-label="Zahl am App-Symbol">
+<p>Offene Anmeldungen als Zahl am App-Symbol zeigen?</p>
+<small>Dafür fragt das Handy, ob die App Mitteilungen senden darf. Sie sendet keine.</small>
+<div><button type="button" class="ja">Einschalten</button><button type="button" class="nein">Nein danke</button></div></div>`);
+    const balken = document.querySelector('.zaehler');
+    // Die Frage des Handys kommt nur direkt auf ein Tippen in dieser Seite, nicht aus dem Rahmen.
+    balken.querySelector('.ja').addEventListener('click', () => {
+      balken.remove();
+      Notification.requestPermission().then(zahlSetzen, () => {});
+    });
+    balken.querySelector('.nein').addEventListener('click', () => {
+      speichern('1', ZAEHLER_NEIN);
+      balken.remove();
+    });
+  };
+  // Grundlage für Mitteilungen in einer späteren Stufe; er tut noch nichts.
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
   addEventListener('message', e => {
     if (!HERKUNFT.test(e.origin) || !ausDemRahmen(e.source)) return;
     const d = e.data || {};
     if (d.c41 === 'anmelden' && /^[0-9a-f-]{36}$/.test(d.geraet)) speichern(d.geraet, GERAET);
-    else if (d.c41 === 'abmelden') { vergessen(GERAET); location.reload(); }
-    else if (d.c41 === 'vergessen') vergessen(GERAET);
+    else if (d.c41 === 'abmelden') { vergessen(GERAET); zahlWeg(); location.reload(); }
+    else if (d.c41 === 'vergessen') { vergessen(GERAET); zahlWeg(); }
+    else if (d.c41 === 'zaehler' && Number.isInteger(d.offen) && d.offen >= 0 && d.offen < 100) {
+      speichern(String(d.offen), ZAEHLER);
+      zahlSetzen();
+      if (d.offen) zahlFragen();
+    }
   });
 } else {
   document.body.insertAdjacentHTML('beforeend', `<div class="hinweis">

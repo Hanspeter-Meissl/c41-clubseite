@@ -16,6 +16,12 @@ Nach dem Einloggen mit Code schickt die Clubseite einen Geräteschlüssel herauf
 Browser (`c41-geraet`) und hängt ihn als `&ich=` an die Adresse der Web-App, nie an die eigene Adresse.
 Angenommen wird die Nachricht nur von einer Adresse unter `googleusercontent.com` und nur aus dem eigenen Rahmen.
 
+Nach „Meine Übersicht“ meldet die Clubseite die Zahl der offenen Anmeldungen (`c41: 'zaehler'`). Die Seite merkt
+sie (`c41-offen`) und zeigt sie mit `navigator.setAppBadge` am App-Symbol, sobald Mitteilungen erlaubt sind. Danach
+fragt einmal ein Balken unten, nur in der Web-App am Home-Bildschirm und nur, wenn etwas offen ist; „Nein danke“
+merkt sich `c41-zaehler-nein`. Abmelden löscht die Zahl. `sw.js` tut noch nichts und ist die Grundlage für
+Mitteilungen in einer späteren Stufe.
+
 Die Symbole in `bilder/` erzeugt `C41 Clubseite Symbole erzeugen.py` im Vault aus `Logo Club 41 Österreich.svg`;
 nicht von Hand ändern.
 
