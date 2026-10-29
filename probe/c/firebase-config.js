@@ -3,12 +3,12 @@
 // Skripteigenschaften von Apps Script.
 window.FIREBASE = {
   config: {
-    apiKey: '',
-    authDomain: '',
-    projectId: '',
-    messagingSenderId: '',
-    appId: '',
+    apiKey: 'AIzaSyBNo8lPafSpaMCdvhxF5uneEobueEWCJ8I',
+    authDomain: 'c41-clubseite.firebaseapp.com',
+    projectId: 'c41-clubseite',
+    messagingSenderId: '571777034925',
+    appId: '1:571777034925:web:c5a48c5557a6ab7375b424',
   },
   // Cloud Messaging, Web-Push-Zertifikate: öffentlicher Schlüssel des Schlüsselpaars
-  vapidKey: '',
+  vapidKey: 'BL21y_t2U9LYfD8Bgn9E3H6K3BlIUQp0GO4LAv0tmyQZ9cRAV2KUTOgVTlX6kluul5XV5UbKN9LagSqHQr5Gg1o',
 };
