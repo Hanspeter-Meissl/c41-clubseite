@@ -12,7 +12,8 @@ self.addEventListener('push', e => {
   const zahl = inhalt.zahl === undefined || inhalt.zahl === '' ? null : Number(inhalt.zahl);
   // Gleicher „tag“ ersetzt die vorige Mitteilung, so bündelt der Clubchat mehrere Nachrichten zu einer.
   const art = { body: inhalt.text || '', icon: 'bilder/symbol-192.png' };
-  if (inhalt.tag) { art.tag = inhalt.tag; art.renotify = true; }
+  // „leise“ (etwa der fünfte Glückwunsch) ersetzt die vorige ohne Ton.
+  if (inhalt.tag) { art.tag = inhalt.tag; art.renotify = inhalt.leise !== '1'; }
   // iOS entzieht die Erlaubnis, wenn auf eine Mitteilung hin nichts angezeigt wird; deshalb immer anzeigen.
   const arbeit = [self.registration.showNotification(inhalt.titel || 'Club 41', art)];
   if (zahl !== null && !Number.isNaN(zahl) && self.navigator.setAppBadge) {
