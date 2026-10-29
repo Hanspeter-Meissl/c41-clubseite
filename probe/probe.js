@@ -60,6 +60,15 @@ async function anmelden() {
     diagnoseZeigen();
     if (erlaubnis !== 'granted') { melden('Erlaubnis nicht erteilt: ' + erlaubnis, true); return; }
     const reg = registrierung || await navigator.serviceWorker.ready;
+    if (VARIANTE === 'c') {
+      // Variante c meldet das Gerät bei Firebase an; die Kennung ist dann ein Firebase-Token.
+      if (!window.FIREBASE || !window.FIREBASE.config.apiKey) { melden('Firebase ist in firebase-config.js noch nicht eingetragen.', true); return; }
+      if (!firebase.apps.length) firebase.initializeApp(window.FIREBASE.config);
+      const token = await firebase.messaging().getToken({ vapidKey: window.FIREBASE.vapidKey, serviceWorkerRegistration: reg });
+      kennungZeigen({ toJSON: () => token }, token);
+      melden('Bei Firebase angemeldet. Jetzt „Kennung kopieren“ und in den Chat einfügen.');
+      return;
+    }
     let abo = await reg.pushManager.getSubscription();
     if (!abo) abo = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytes(OEFFENTLICH) });
     kennungZeigen(abo);
@@ -69,8 +78,8 @@ async function anmelden() {
   }
 }
 
-function kennungZeigen(abo) {
-  const text = JSON.stringify(abo);
+function kennungZeigen(abo, rein) {
+  const text = rein || JSON.stringify(abo);
   $('kennung').value = text;
   $('kennungBox').hidden = false;
   const koerper = 'Kennung der Probe ' + VARIANTE.toUpperCase() + ' für Claude:\n\nKENNUNG-ANFANG' + text +
@@ -119,7 +128,7 @@ async function start() {
     catch (e) { melden('Service Worker nicht angemeldet: ' + e.message, true); }
     try {
       const reg = registrierung || await navigator.serviceWorker.ready;
-      const abo = reg.pushManager && await reg.pushManager.getSubscription();
+      const abo = VARIANTE !== 'c' && reg.pushManager && await reg.pushManager.getSubscription();
       if (abo) kennungZeigen(abo);
     } catch (e) { /* noch nicht angemeldet */ }
   }

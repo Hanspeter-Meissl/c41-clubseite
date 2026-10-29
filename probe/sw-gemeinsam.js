@@ -15,6 +15,9 @@ async function protokollieren(eintrag) {
 self.addEventListener('push', e => {
   let inhalt = {};
   try { inhalt = e.data ? e.data.json() : {}; } catch (f) { inhalt = { text: e.data ? e.data.text() : '' }; }
+  // Firebase (Variante c) packt den Inhalt in „data“ und schickt jeden Wert als Zeichen.
+  if (inhalt.data && (inhalt.fcmMessageId || inhalt.from)) inhalt = inhalt.data;
+  if (typeof inhalt.zahl === 'string') inhalt.zahl = inhalt.zahl === '' ? null : Number(inhalt.zahl);
   const titel = inhalt.titel || 'Club 41';
   const text = (inhalt.text || 'Mitteilung ohne Text') + (inhalt.gesendet ? ' (gesendet ' + inhalt.gesendet + ')' : '');
   const empfangen = new Date().toLocaleTimeString('de-AT');
