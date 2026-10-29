@@ -97,7 +97,7 @@ function kennungZeigen(abo, rein) {
   $('kennungBox').hidden = false;
   const koerper = 'Kennung der Probe ' + VARIANTE.toUpperCase() + ' für Claude:\n\nKENNUNG-ANFANG' + text +
     'KENNUNG-ENDE\n\n' + JSON.stringify(diagnose());
-  $('mail').href = 'mailto:?subject=' + encodeURIComponent('C41 Probe Mitteilungen ' + VARIANTE.toUpperCase()) +
+  if ($('mail')) $('mail').href = 'mailto:?subject=' + encodeURIComponent('C41 Probe Mitteilungen ' + VARIANTE.toUpperCase()) +
     '&body=' + encodeURIComponent(koerper);
 }
 
