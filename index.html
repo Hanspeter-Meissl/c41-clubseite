@@ -58,12 +58,20 @@
 // Link: https://hanspeter-meissl.github.io/c41-clubseite/#<Clubschlüssel>, wahlweise #<Clubschlüssel>&teil=termine
 const GOOGLE = 'https://script.google.com/macros/s/AKfycbwA6RqLDdoVVz6Qzi1ovLaQONPdTYP92pCApP5XdqMyPqjxwCo1kUpnUeOiNfIeRehJ/exec';
 const SPEICHER = 'c41-clubschluessel';
+// Geräteschlüssel nach dem Einloggen mit Code: Die Clubseite zeigt damit gleich „Zu meiner Anmeldung“. Er steht
+// nur hier im Speicher des Geräts, nie in der Adresse, und geht nur an die Web-App.
+const GERAET = 'c41-geraet';
+// Die Clubseite läuft bei Google in einem inneren Rahmen auf einer Adresse unter googleusercontent.com.
+const HERKUNFT = /^https:\/\/[\w-]+\.googleusercontent\.com$/;
 
-function speichern(club) {
-  try { localStorage.setItem(SPEICHER, club); } catch (e) {}
+function speichern(club, name) {
+  try { localStorage.setItem(name || SPEICHER, club); } catch (e) {}
 }
-function gespeichert() {
-  try { return localStorage.getItem(SPEICHER) || ''; } catch (e) { return ''; }
+function gespeichert(name) {
+  try { return localStorage.getItem(name || SPEICHER) || ''; } catch (e) { return ''; }
+}
+function vergessen(name) {
+  try { localStorage.removeItem(name); } catch (e) {}
 }
 
 const teile = location.hash.slice(1).split('&');
@@ -106,8 +114,28 @@ if (club) {
     laden.classList.add('fertig');
     setTimeout(() => laden.remove(), 400);
   }, { once: true });
-  f.src = GOOGLE + '?club=' + encodeURIComponent(club) + (teil ? '&teil=' + encodeURIComponent(teil) : '');
+  const geraet = gespeichert(GERAET);
+  f.src = GOOGLE + '?club=' + encodeURIComponent(club) + (teil ? '&teil=' + encodeURIComponent(teil) : '')
+    + (geraet ? '&ich=' + encodeURIComponent(geraet) : '');
   document.body.appendChild(f);
+
+  // Nachrichten der Clubseite nach dem Einloggen und Abmelden. Angenommen wird nur, was aus dem eigenen Rahmen
+  // kommt: Der Absender muss dieser Rahmen oder ein Rahmen darin sein, nicht nur irgendeine Google-Adresse.
+  const ausDemRahmen = w => {
+    for (let i = 0; w && i < 4; i++) {
+      if (w === f.contentWindow) return true;
+      if (w === w.parent) return false;
+      w = w.parent;
+    }
+    return false;
+  };
+  addEventListener('message', e => {
+    if (!HERKUNFT.test(e.origin) || !ausDemRahmen(e.source)) return;
+    const d = e.data || {};
+    if (d.c41 === 'anmelden' && /^[0-9a-f-]{36}$/.test(d.geraet)) speichern(d.geraet, GERAET);
+    else if (d.c41 === 'abmelden') { vergessen(GERAET); location.reload(); }
+    else if (d.c41 === 'vergessen') vergessen(GERAET);
+  });
 } else {
   document.body.insertAdjacentHTML('beforeend', `<div class="hinweis">
 <img src="bilder/symbol-192.png" alt="Club 41 Österreich">

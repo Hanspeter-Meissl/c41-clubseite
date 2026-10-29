@@ -12,6 +12,10 @@ Link: `https://hanspeter-meissl.github.io/c41-clubseite/#<Clubschlüssel>`, wahl
 wird nicht an GitHub übertragen. Die Seite merkt sich den Schlüssel im Browser, damit ein Lesezeichen ohne ihn
 trotzdem öffnet. Bis Google die Web-App geliefert hat, steht eine Ladeanzeige mit dem Logo über dem Rahmen.
 
+Nach dem Einloggen mit Code schickt die Clubseite einen Geräteschlüssel herauf. Die Seite merkt ihn sich im
+Browser (`c41-geraet`) und hängt ihn als `&ich=` an die Adresse der Web-App, nie an die eigene Adresse.
+Angenommen wird die Nachricht nur von einer Adresse unter `googleusercontent.com` und nur aus dem eigenen Rahmen.
+
 Die Symbole in `bilder/` erzeugt `C41 Clubseite Symbole erzeugen.py` im Vault aus `Logo Club 41 Österreich.svg`;
 nicht von Hand ändern.
 
