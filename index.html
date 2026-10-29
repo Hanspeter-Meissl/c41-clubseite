@@ -78,6 +78,30 @@ const HERKUNFT = /^https:\/\/[\w-]+\.googleusercontent\.com$/;
 // Zahl der offenen Anmeldungen für das App-Symbol und der Merker, dass das Mitglied die Zahl nicht will.
 const ZAEHLER = 'c41-offen';
 const ZAEHLER_NEIN = 'c41-zaehler-nein';
+// Mitteilungen (Ausbau um Chat, Fotos und Geburtstage, noch nicht bereitgestellt): Das Gerät meldet sich bei
+// Firebase an. Die Kennung geht wie der Geräteschlüssel als „&push=“ an die Clubseite, die damit neue Nachrichten,
+// Ankündigungen und Geburtstage meldet. Firebase wird erst geladen, wenn das Gerät eingeloggt ist und Mitteilungen
+// erlaubt sind; vorher kostet es keine Ladezeit.
+const PUSH = 'c41-push';
+const FIREBASE_SDK = ['https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
+  'https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js', 'firebase-config.js'];
+let firebaseBereit = null;
+function firebaseLaden() {
+  if (!firebaseBereit) {
+    firebaseBereit = FIREBASE_SDK.reduce((weiter, src) => weiter.then(() => new Promise((ok, nein) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = ok;
+      s.onerror = nein;
+      document.head.appendChild(s);
+    })), Promise.resolve()).then(() => {
+      if (!firebase.apps.length) firebase.initializeApp(window.FIREBASE.config);
+      return firebase.messaging();
+    });
+    firebaseBereit.catch(() => { firebaseBereit = null; });
+  }
+  return firebaseBereit;
+}
 
 function speichern(club, name) {
   try { localStorage.setItem(name || SPEICHER, club); } catch (e) {}
@@ -129,9 +153,13 @@ if (club) {
     laden.classList.add('fertig');
     setTimeout(() => laden.remove(), 400);
   }, { once: true });
-  const geraet = gespeichert(GERAET);
-  f.src = GOOGLE + '?club=' + encodeURIComponent(club) + (teil ? '&teil=' + encodeURIComponent(teil) : '')
-    + (geraet ? '&ich=' + encodeURIComponent(geraet) : '');
+  const adresse = () => {
+    const geraet = gespeichert(GERAET);
+    const push = geraet && gespeichert(PUSH);
+    return GOOGLE + '?club=' + encodeURIComponent(club) + (teil ? '&teil=' + encodeURIComponent(teil) : '')
+      + (geraet ? '&ich=' + encodeURIComponent(geraet) : '') + (push ? '&push=' + encodeURIComponent(push) : '');
+  };
+  f.src = adresse();
   document.body.appendChild(f);
 
   // Nachrichten der Clubseite nach dem Einloggen und Abmelden. Angenommen wird nur, was aus dem eigenen Rahmen
@@ -159,33 +187,54 @@ if (club) {
     vergessen(ZAEHLER);
     zahlSetzen();
   };
+  // Kennung bei Firebase holen, sobald das Gerät eingeloggt ist und Mitteilungen erlaubt sind. Ist sie neu, lädt
+  // der Rahmen einmal mit „&push=“ neu, damit die Clubseite sie sich merkt.
+  const pushHolen = () => {
+    if (!gespeichert(GERAET) || !('Notification' in window) || Notification.permission !== 'granted'
+        || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready
+      .then(reg => firebaseLaden().then(m => m.getToken({ vapidKey: window.FIREBASE.vapidKey, serviceWorkerRegistration: reg })))
+      .then(token => {
+        if (!token || token === gespeichert(PUSH)) return;
+        speichern(token, PUSH);
+        f.src = adresse();
+      })
+      .catch(() => {});
+  };
+  const pushWeg = () => {
+    vergessen(PUSH);
+    if (firebaseBereit) firebaseBereit.then(m => m.deleteToken()).catch(() => {});
+  };
+  // Seit dem Ausbau fragt der Balken nach Mitteilungen samt Zahl, sobald das Gerät eingeloggt ist.
   const zahlFragen = () => {
     if (!symbolZahl || !alsApp || Notification.permission !== 'default' || gespeichert(ZAEHLER_NEIN)
-        || document.querySelector('.zaehler')) return;
-    document.body.insertAdjacentHTML('beforeend', `<div class="zaehler" role="dialog" aria-label="Zahl am App-Symbol">
-<p>Offene Anmeldungen als Zahl am App-Symbol zeigen?</p>
-<small>Dafür fragt das Handy, ob die App Mitteilungen senden darf. Sie sendet keine.</small>
+        || !gespeichert(GERAET) || document.querySelector('.zaehler')) return;
+    document.body.insertAdjacentHTML('beforeend', `<div class="zaehler" role="dialog" aria-label="Mitteilungen">
+<p>Mitteilungen einschalten?</p>
+<small>Neue Nachrichten im Clubchat, Ankündigungen und Geburtstage melden sich am Handy, dazu die Zahl am App-Symbol.</small>
 <div><button type="button" class="ja">Einschalten</button><button type="button" class="nein">Nein danke</button></div></div>`);
     const balken = document.querySelector('.zaehler');
     // Die Frage des Handys kommt nur direkt auf ein Tippen in dieser Seite, nicht aus dem Rahmen.
     balken.querySelector('.ja').addEventListener('click', () => {
       balken.remove();
-      Notification.requestPermission().then(zahlSetzen, () => {});
+      Notification.requestPermission().then(() => { zahlSetzen(); pushHolen(); }, () => {});
     });
     balken.querySelector('.nein').addEventListener('click', () => {
       speichern('1', ZAEHLER_NEIN);
       balken.remove();
     });
   };
-  // Grundlage für Mitteilungen in einer späteren Stufe; er tut noch nichts.
+  // Der Service Worker zeigt die Mitteilungen an, auch wenn die App geschlossen ist.
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  pushHolen();
+  zahlFragen();
 
   addEventListener('message', e => {
     if (!HERKUNFT.test(e.origin) || !ausDemRahmen(e.source)) return;
     const d = e.data || {};
-    if (d.c41 === 'anmelden' && /^[0-9a-f-]{36}$/.test(d.geraet)) speichern(d.geraet, GERAET);
-    else if (d.c41 === 'abmelden') { vergessen(GERAET); zahlWeg(); location.reload(); }
-    else if (d.c41 === 'vergessen') { vergessen(GERAET); zahlWeg(); }
+    if (d.c41 === 'anmelden' && /^[0-9a-f-]{36}$/.test(d.geraet)) { speichern(d.geraet, GERAET); pushHolen(); zahlFragen(); }
+    else if (d.c41 === 'abmelden') { vergessen(GERAET); pushWeg(); zahlWeg(); location.reload(); }
+    else if (d.c41 === 'vergessen') { vergessen(GERAET); pushWeg(); zahlWeg(); }
     else if (d.c41 === 'zaehler' && Number.isInteger(d.offen) && d.offen >= 0 && d.offen < 100) {
       speichern(String(d.offen), ZAEHLER);
       zahlSetzen();
