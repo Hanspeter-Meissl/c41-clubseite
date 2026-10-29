@@ -25,6 +25,28 @@
   }
   .hinweis img { width: 72px; height: 72px; }
   .hinweis h1 { font: 400 26px/1.2 Georgia, serif; color: #1F3864; margin: 16px 0 8px; }
+  /* Ladeanzeige über dem Rahmen, bis Google die Clubseite geliefert hat. Farben wie in Code.gs. */
+  .laden {
+    position: fixed; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 14px; padding: 16px; background: #F4F6F9; color: #1d1d1f; text-align: center;
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; transition: opacity .3s;
+  }
+  .laden.fertig { opacity: 0; pointer-events: none; }
+  .laden img { width: 96px; height: 96px; border-radius: 22px; }
+  .laden .club { color: #D19B5D; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .laden .rad {
+    width: 34px; height: 34px; border-radius: 50%; border: 4px solid #E3E7EE; border-top-color: #154381;
+    border-right-color: #D19B5D; animation: drehen .9s linear infinite;
+  }
+  @keyframes drehen { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .laden .rad { animation-duration: 3s; } }
+  .laden .text { font-weight: 600; color: #154381; }
+  .laden .zusatz { max-width: 300px; font-size: 14px; color: #595959; }
+  .laden [hidden] { display: none; }
+  .laden button {
+    font: inherit; font-weight: 600; border: 0; border-radius: 20px; padding: 8px 18px;
+    background: #D19B5D; color: #1d1d1f; cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -58,8 +80,32 @@ if (club) {
 }
 
 if (club) {
+  // Google rechnet die Seite erst fertig (Zahlen aller Vorhaben, Termine, Rundschreiben) und liefert sie dann
+  // auf einmal. Bis dahin bliebe der Rahmen weiß, deshalb steht so lange die Ladeanzeige darüber.
+  document.body.insertAdjacentHTML('beforeend', `<div class="laden" role="status" aria-live="polite">
+<img src="bilder/symbol-192.png" alt="">
+<div class="club">Club 41 Grieskirchen-Hausruck</div>
+<div class="rad" aria-hidden="true"></div>
+<div class="text">Übersicht wird geladen</div>
+<div class="zusatz" hidden>Die aktuellen Zahlen werden bei den Anmeldungen abgefragt. Das dauert einige Sekunden.</div>
+<div class="zusatz" hidden>Das dauert länger als üblich.</div>
+<button type="button" hidden>Neu laden</button></div>`);
+  const laden = document.querySelector('.laden');
+  const [lang, sehrLang] = laden.querySelectorAll('.zusatz');
+  const knopf = laden.querySelector('button');
+  const uhren = [
+    setTimeout(() => { lang.hidden = false; }, 4000),
+    setTimeout(() => { lang.hidden = true; sehrLang.hidden = false; knopf.hidden = false; }, 30000),
+  ];
+  knopf.addEventListener('click', () => location.reload());
+
   const f = document.createElement('iframe');
   f.title = 'Club 41 Übersicht';
+  f.addEventListener('load', () => {
+    uhren.forEach(clearTimeout);
+    laden.classList.add('fertig');
+    setTimeout(() => laden.remove(), 400);
+  }, { once: true });
   f.src = GOOGLE + '?club=' + encodeURIComponent(club) + (teil ? '&teil=' + encodeURIComponent(teil) : '');
   document.body.appendChild(f);
 } else {

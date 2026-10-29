@@ -10,7 +10,7 @@ dem sich kein Symbol für den Home-Bildschirm setzen lässt. Diese Seite trägt 
 Link: `https://hanspeter-meissl.github.io/c41-clubseite/#<Clubschlüssel>`, wahlweise mit `&teil=termine` oder
 `&teil=rundschreiben`. Den vollständigen Link gibt `C41 Clubseite abgleichen.py` aus. Der Teil hinter dem „#“
 wird nicht an GitHub übertragen. Die Seite merkt sich den Schlüssel im Browser, damit ein Lesezeichen ohne ihn
-trotzdem öffnet.
+trotzdem öffnet. Bis Google die Web-App geliefert hat, steht eine Ladeanzeige mit dem Logo über dem Rahmen.
 
 Die Symbole in `bilder/` erzeugt `C41 Clubseite Symbole erzeugen.py` im Vault aus `Logo Club 41 Österreich.svg`;
 nicht von Hand ändern.
