@@ -61,12 +61,7 @@ async function anmelden() {
     if (erlaubnis !== 'granted') { melden('Erlaubnis nicht erteilt: ' + erlaubnis, true); return; }
     const reg = registrierung || await navigator.serviceWorker.ready;
     if (VARIANTE === 'c') {
-      // Variante c meldet das Gerät bei Firebase an; die Kennung ist dann ein Firebase-Token.
-      if (!window.FIREBASE || !window.FIREBASE.config.apiKey) { melden('Firebase ist in firebase-config.js noch nicht eingetragen.', true); return; }
-      if (!firebase.apps.length) firebase.initializeApp(window.FIREBASE.config);
-      const token = await firebase.messaging().getToken({ vapidKey: window.FIREBASE.vapidKey, serviceWorkerRegistration: reg });
-      kennungZeigen({ toJSON: () => token }, token);
-      melden('Bei Firebase angemeldet. Jetzt „Kennung kopieren“ und in den Chat einfügen.');
+      await firebaseKennung(reg, false);
       return;
     }
     let abo = await reg.pushManager.getSubscription();
@@ -76,6 +71,24 @@ async function anmelden() {
   } catch (e) {
     melden('Fehler beim Anmelden: ' + (e && e.message || e), true);
   }
+}
+
+// Variante c meldet das Gerät bei Firebase an; die Kennung ist dann ein Firebase-Token. „neu“ verwirft
+// zuerst das bisherige Token, falls Firebase es nicht mehr kennt (Antwort „NotRegistered“ beim Senden).
+async function firebaseKennung(reg, neu) {
+  if (!window.FIREBASE || !window.FIREBASE.config.apiKey) { melden('Firebase ist in firebase-config.js noch nicht eingetragen.', true); return; }
+  if (!firebase.apps.length) firebase.initializeApp(window.FIREBASE.config);
+  const m = firebase.messaging();
+  if (neu) await m.deleteToken().catch(() => {});
+  const token = await m.getToken({ vapidKey: window.FIREBASE.vapidKey, serviceWorkerRegistration: reg });
+  kennungZeigen({ toJSON: () => token }, token);
+  $('laenge').textContent = token.length + ' Zeichen, geholt um ' + new Date().toLocaleTimeString('de-AT') + (alsApp() ? '' : ', nicht als Web-App');
+  melden('Bei Firebase angemeldet. Jetzt „Kennung kopieren“ und in den Chat einfügen.');
+}
+
+async function neuAnmelden() {
+  try { await firebaseKennung(registrierung || await navigator.serviceWorker.ready, true); }
+  catch (e) { melden('Fehler beim Anmelden: ' + (e && e.message || e), true); }
 }
 
 function kennungZeigen(abo, rein) {
@@ -130,12 +143,14 @@ async function start() {
       const reg = registrierung || await navigator.serviceWorker.ready;
       const abo = VARIANTE !== 'c' && reg.pushManager && await reg.pushManager.getSubscription();
       if (abo) kennungZeigen(abo);
+      if (VARIANTE === 'c' && 'Notification' in window && Notification.permission === 'granted') await firebaseKennung(reg, false);
     } catch (e) { /* noch nicht angemeldet */ }
   }
   $('anmelden').onclick = anmelden;
   $('kopieren').onclick = kopieren;
   $('ortsprobe').onclick = ortsprobe;
   $('zahlLoeschen').onclick = zahlLoeschen;
+  if ($('neu')) $('neu').onclick = neuAnmelden;
   protokollZeigen();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { protokollZeigen(); diagnoseZeigen(); } });
   if (navigator.serviceWorker) navigator.serviceWorker.addEventListener('message', protokollZeigen);
