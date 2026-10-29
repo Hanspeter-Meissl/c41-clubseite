@@ -27,8 +27,8 @@ nicht von Hand ändern.
 
 Nichts Geheimes in dieses Repository: Es ist öffentlich. Die Adresse der Web-App darf hinein, der Clubschlüssel nie.
 
-`probe/` ist die Probe für Mitteilungen (Web Push) vom 29. Oktober 2026, getrennt von der Einstiegsseite und ohne
-Clubschlüssel. `probe/a/` hat wie die Einstiegsseite kein Webmanifest, `probe/b/` eines, `probe/c/` meldet das Gerät bei Firebase an (öffentliche Angaben in `probe/c/firebase-config.js`). Jede Variante hat ihren
-eigenen Service Worker, der nur in ihrem Ordner gilt; der gemeinsame Code steht in `probe/sw-gemeinsam.js` und
-`probe/probe.js`. Der öffentliche Schlüssel in `probe.js` gehört zu `C41 Mitteilung Probe senden.py` im Vault, der
-private liegt nur am PC. Nach der Probe kommt der Ordner wieder weg.
+`probe/c/` ist die Probe für Mitteilungen über Firebase vom 29. Oktober 2026, getrennt von der Einstiegsseite und
+ohne Clubschlüssel. Sie bleibt als Muster, bis die Mitteilungen in die Einstiegsseite eingebaut sind, und kommt
+danach weg. Der Service Worker gilt nur in ihrem Ordner, der gemeinsame Code steht in `probe/sw-gemeinsam.js` und
+`probe/probe.js`, die öffentlichen Angaben des Firebase-Projekts in `probe/c/firebase-config.js`. Die Varianten
+`a` (Web Push ohne Firebase, ohne Webmanifest) und `b` (mit Webmanifest) sind nach der bestandenen Probe entfernt.
