@@ -23,10 +23,14 @@ self.addEventListener('push', e => {
 });
 
 // Ein Tippen auf die Mitteilung öffnet die App; der Clubschlüssel kommt aus dem Speicher der Einstiegsseite.
+// Clubchat, Ankündigung und Geburtstag öffnen den Reiter „Chat“ („#&teil=chat“, ohne Schlüssel in der Adresse).
+// Ist die App schon offen, kommt sie nur nach vorn; sie holt das Neue dann von selbst.
 self.addEventListener('notificationclick', e => {
   e.notification.close();
+  const t = e.notification.tag || '';
+  const chat = t === 'chat' || /^(ankuendigung|geburtstag)-/.test(t) || e.notification.title === 'Geburtstag';
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(liste => {
     const offen = liste.find(c => c.url.startsWith(self.registration.scope));
-    return offen ? offen.focus() : self.clients.openWindow(self.registration.scope);
+    return offen ? offen.focus() : self.clients.openWindow(self.registration.scope + (chat ? '#&teil=chat' : ''));
   }));
 });
