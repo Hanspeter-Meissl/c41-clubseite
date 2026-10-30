@@ -1,0 +1,257 @@
+<!doctype html>
+<!-- Erzeugt von „C41 Testseite erzeugen.py“ im Vault aus ausbau-chat:index.html. Nicht von Hand ändern. -->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>C41 Test</title>
+<meta name="apple-mobile-web-app-title" content="C41 Test">
+<link rel="apple-touch-icon" href="../bilder/symbol-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="../bilder/symbol-192.png">
+<link rel="icon" type="image/png" sizes="32x32" href="../bilder/symbol-32.png">
+<meta name="description" content="Termine, Anmeldungen und Rundschreiben des Club 41 Grieskirchen-Hausruck.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="de_AT">
+<meta property="og:site_name" content="Club 41 Grieskirchen-Hausruck">
+<meta property="og:title" content="Club 41 Übersicht">
+<meta property="og:description" content="Termine, Anmeldungen und Rundschreiben des Club 41 Grieskirchen-Hausruck.">
+<meta property="og:image" content="https://hanspeter-meissl.github.io/c41-clubseite/bilder/symbol-192.png">
+<style>
+  html, body { margin: 0; height: 100%; background: #fff; }
+  iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; }
+  .hinweis {
+    max-width: 640px; margin: 0 auto; padding: 40px 16px; color: #1D2733;
+    font: 16px/1.5 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  }
+  .hinweis img { width: 72px; height: 72px; }
+  .hinweis h1 { font: 400 26px/1.2 Georgia, serif; color: #1F3864; margin: 16px 0 8px; }
+  /* Ladeanzeige über dem Rahmen, bis Google die Clubseite geliefert hat. Farben wie in Code.gs. */
+  .laden {
+    position: fixed; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 14px; padding: 16px; background: #F4F6F9; color: #1d1d1f; text-align: center;
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; transition: opacity .3s;
+  }
+  .laden.fertig { opacity: 0; pointer-events: none; }
+  .laden img { width: 96px; height: 96px; border-radius: 22px; }
+  .laden .club { color: #D19B5D; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .laden .rad {
+    width: 34px; height: 34px; border-radius: 50%; border: 4px solid #E3E7EE; border-top-color: #154381;
+    border-right-color: #D19B5D; animation: drehen .9s linear infinite;
+  }
+  @keyframes drehen { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .laden .rad { animation-duration: 3s; } }
+  .laden .test { background: #a4262c; color: #fff; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border-radius: 6px; padding: 2px 10px; }
+  .laden .text { font-weight: 600; color: #154381; }
+  .laden .zusatz { max-width: 300px; font-size: 14px; color: #595959; }
+  .laden [hidden] { display: none; }
+  .laden button {
+    font: inherit; font-weight: 600; border: 0; border-radius: 20px; padding: 8px 18px;
+    background: #D19B5D; color: #1d1d1f; cursor: pointer;
+  }
+  /* Frage nach der Zahl am App-Symbol, unten über dem Rahmen. */
+  .zaehler {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 2; padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+    background: #154381; color: #fff; box-shadow: 0 -2px 12px rgba(0, 0, 0, .2);
+    font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  }
+  .zaehler p { margin: 0 0 4px; font-weight: 600; }
+  .zaehler small { display: block; margin-bottom: 10px; color: #D6DEEA; }
+  .zaehler div { display: flex; gap: 10px; }
+  .zaehler button { font: inherit; font-weight: 600; border: 0; border-radius: 20px; padding: 8px 18px; cursor: pointer; }
+  .zaehler .ja { background: #D19B5D; color: #1d1d1f; }
+  .zaehler .nein { background: transparent; color: #fff; border: 1px solid #8FA6C8; }
+</style>
+</head>
+<body>
+<noscript><div class="hinweis">Diese Seite braucht JavaScript.</div></noscript>
+<script>
+// Einstiegsseite der Clubseite. Sie trägt das Symbol für den Home-Bildschirm, das die Google-Web-App nicht
+// setzen kann, und zeigt die Web-App darin an. Der Clubschlüssel steht im Link hinter dem „#“: Dieser Teil geht
+// nicht an GitHub und steht nicht in diesem öffentlichen Repository.
+// Link: https://hanspeter-meissl.github.io/c41-clubseite/#<Clubschlüssel>, wahlweise #<Clubschlüssel>&teil=termine
+const GOOGLE = 'https://script.google.com/macros/s/AKfycby0rab5mmdKuzMR9N-ib47BuWOJagL_0u73umfh4KqN8Bp7GdKBzqoPUxyF3DZFD-XXbQ/exec';
+const SPEICHER = 'c41-test-clubschluessel';
+// Geräteschlüssel nach dem Einloggen mit Code: Die Clubseite zeigt damit gleich „Zu meiner Anmeldung“. Er steht
+// nur hier im Speicher des Geräts, nie in der Adresse, und geht nur an die Web-App.
+const GERAET = 'c41-test-geraet';
+// Die Clubseite läuft bei Google in einem inneren Rahmen auf einer Adresse unter googleusercontent.com.
+const HERKUNFT = /^https:\/\/[\w-]+\.googleusercontent\.com$/;
+// Zahl der offenen Anmeldungen für das App-Symbol und der Merker, dass das Mitglied die Zahl nicht will.
+const ZAEHLER = 'c41-test-offen';
+const ZAEHLER_NEIN = 'c41-test-zaehler-nein';
+// Mitteilungen (Ausbau um Chat, Fotos und Geburtstage, noch nicht bereitgestellt): Das Gerät meldet sich bei
+// Firebase an. Die Kennung geht wie der Geräteschlüssel als „&push=“ an die Clubseite, die damit neue Nachrichten,
+// Ankündigungen und Geburtstage meldet. Firebase wird erst geladen, wenn das Gerät eingeloggt ist und Mitteilungen
+// erlaubt sind; vorher kostet es keine Ladezeit.
+const PUSH = 'c41-test-push';
+const FIREBASE_SDK = ['https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
+  'https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js', 'firebase-config.js'];
+let firebaseBereit = null;
+function firebaseLaden() {
+  if (!firebaseBereit) {
+    firebaseBereit = FIREBASE_SDK.reduce((weiter, src) => weiter.then(() => new Promise((ok, nein) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = ok;
+      s.onerror = nein;
+      document.head.appendChild(s);
+    })), Promise.resolve()).then(() => {
+      if (!firebase.apps.length) firebase.initializeApp(window.FIREBASE.config);
+      return firebase.messaging();
+    });
+    firebaseBereit.catch(() => { firebaseBereit = null; });
+  }
+  return firebaseBereit;
+}
+
+function speichern(club, name) {
+  try { localStorage.setItem(name || SPEICHER, club); } catch (e) {}
+}
+function gespeichert(name) {
+  try { return localStorage.getItem(name || SPEICHER) || ''; } catch (e) { return ''; }
+}
+function vergessen(name) {
+  try { localStorage.removeItem(name); } catch (e) {}
+}
+
+const teile = location.hash.slice(1).split('&');
+let club = /^[\w-]{8,}$/.test(teile[0]) ? teile[0] : '';
+const teil = new URLSearchParams(teile.slice(1).join('&')).get('teil');
+
+if (club) {
+  speichern(club);
+} else {
+  // Ohne Schlüssel im Link den zuletzt verwendeten nehmen und in die Adresse zurückschreiben,
+  // damit ein Lesezeichen von hier aus wieder vollständig ist.
+  club = gespeichert();
+  if (club) history.replaceState(null, '', '#' + club);
+}
+
+if (club) {
+  // Google rechnet die Seite erst fertig (Zahlen aller Vorhaben, Termine, Rundschreiben) und liefert sie dann
+  // auf einmal. Bis dahin bliebe der Rahmen weiß, deshalb steht so lange die Ladeanzeige darüber.
+  document.body.insertAdjacentHTML('beforeend', `<div class="laden" role="status" aria-live="polite">
+<img src="../bilder/symbol-192.png" alt="">
+<div class="club">Club 41 Grieskirchen-Hausruck</div>
+<div class="test">Test</div>
+<div class="rad" aria-hidden="true"></div>
+<div class="text">Übersicht wird geladen</div>
+<div class="zusatz" hidden>Die aktuellen Zahlen werden bei den Anmeldungen abgefragt. Das dauert einige Sekunden.</div>
+<div class="zusatz" hidden>Das dauert länger als üblich.</div>
+<button type="button" hidden>Neu laden</button></div>`);
+  const laden = document.querySelector('.laden');
+  const [lang, sehrLang] = laden.querySelectorAll('.zusatz');
+  const knopf = laden.querySelector('button');
+  const uhren = [
+    setTimeout(() => { lang.hidden = false; }, 4000),
+    setTimeout(() => { lang.hidden = true; sehrLang.hidden = false; knopf.hidden = false; }, 30000),
+  ];
+  knopf.addEventListener('click', () => location.reload());
+
+  const f = document.createElement('iframe');
+  f.title = 'Club 41 Übersicht';
+  f.addEventListener('load', () => {
+    uhren.forEach(clearTimeout);
+    laden.classList.add('fertig');
+    setTimeout(() => laden.remove(), 400);
+  }, { once: true });
+  const adresse = () => {
+    const geraet = gespeichert(GERAET);
+    const push = geraet && gespeichert(PUSH);
+    return GOOGLE + '?club=' + encodeURIComponent(club) + (teil ? '&teil=' + encodeURIComponent(teil) : '')
+      + (geraet ? '&ich=' + encodeURIComponent(geraet) : '') + (push ? '&push=' + encodeURIComponent(push) : '');
+  };
+  f.src = adresse();
+  document.body.appendChild(f);
+
+  // Nachrichten der Clubseite nach dem Einloggen und Abmelden. Angenommen wird nur, was aus dem eigenen Rahmen
+  // kommt: Der Absender muss dieser Rahmen oder ein Rahmen darin sein, nicht nur irgendeine Google-Adresse.
+  const ausDemRahmen = w => {
+    for (let i = 0; w && i < 4; i++) {
+      if (w === f.contentWindow) return true;
+      if (w === w.parent) return false;
+      w = w.parent;
+    }
+    return false;
+  };
+  // Zahl am App-Symbol (seit 29. Oktober 2026): Die Clubseite meldet nach „Meine Übersicht“, wie viele Anmeldungen
+  // noch offen sind. Das iPhone zeigt die Zahl nur in der Web-App am Home-Bildschirm und erst, wenn Mitteilungen
+  // erlaubt sind. Danach fragt einmal ein Balken, sobald etwas offen ist; Mitteilungen schickt die Seite keine.
+  // Die Zahl stimmt jeweils für den Zeitpunkt, an dem die App zuletzt offen war.
+  const symbolZahl = 'setAppBadge' in navigator && 'Notification' in window;
+  const alsApp = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  const zahlSetzen = () => {
+    if (!symbolZahl || Notification.permission !== 'granted') return;
+    const n = Number(gespeichert(ZAEHLER)) || 0;
+    (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
+  };
+  const zahlWeg = () => {
+    vergessen(ZAEHLER);
+    zahlSetzen();
+  };
+  // Kennung bei Firebase holen, sobald das Gerät eingeloggt ist und Mitteilungen erlaubt sind. Ist sie neu, lädt
+  // der Rahmen einmal mit „&push=“ neu, damit die Clubseite sie sich merkt.
+  const pushHolen = () => {
+    if (!gespeichert(GERAET) || !('Notification' in window) || Notification.permission !== 'granted'
+        || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready
+      .then(reg => firebaseLaden().then(m => m.getToken({ vapidKey: window.FIREBASE.vapidKey, serviceWorkerRegistration: reg })))
+      .then(token => {
+        if (!token || token === gespeichert(PUSH)) return;
+        speichern(token, PUSH);
+        f.src = adresse();
+      })
+      .catch(() => {});
+  };
+  const pushWeg = () => {
+    vergessen(PUSH);
+    if (firebaseBereit) firebaseBereit.then(m => m.deleteToken()).catch(() => {});
+  };
+  // Seit dem Ausbau fragt der Balken nach Mitteilungen samt Zahl, sobald das Gerät eingeloggt ist.
+  const zahlFragen = () => {
+    if (!symbolZahl || !alsApp || Notification.permission !== 'default' || gespeichert(ZAEHLER_NEIN)
+        || !gespeichert(GERAET) || document.querySelector('.zaehler')) return;
+    document.body.insertAdjacentHTML('beforeend', `<div class="zaehler" role="dialog" aria-label="Mitteilungen">
+<p>Mitteilungen einschalten?</p>
+<small>Neue Nachrichten im Clubchat, Ankündigungen und Geburtstage melden sich am Handy, dazu die Zahl am App-Symbol.</small>
+<div><button type="button" class="ja">Einschalten</button><button type="button" class="nein">Nein danke</button></div></div>`);
+    const balken = document.querySelector('.zaehler');
+    // Die Frage des Handys kommt nur direkt auf ein Tippen in dieser Seite, nicht aus dem Rahmen.
+    balken.querySelector('.ja').addEventListener('click', () => {
+      balken.remove();
+      Notification.requestPermission().then(() => { zahlSetzen(); pushHolen(); }, () => {});
+    });
+    balken.querySelector('.nein').addEventListener('click', () => {
+      speichern('1', ZAEHLER_NEIN);
+      balken.remove();
+    });
+  };
+  // Der Service Worker zeigt die Mitteilungen an, auch wenn die App geschlossen ist.
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  pushHolen();
+  zahlFragen();
+
+  addEventListener('message', e => {
+    if (!HERKUNFT.test(e.origin) || !ausDemRahmen(e.source)) return;
+    const d = e.data || {};
+    if (d.c41 === 'anmelden' && /^[0-9a-f-]{36}$/.test(d.geraet)) { speichern(d.geraet, GERAET); pushHolen(); zahlFragen(); }
+    else if (d.c41 === 'abmelden') { vergessen(GERAET); pushWeg(); zahlWeg(); location.reload(); }
+    else if (d.c41 === 'vergessen') { vergessen(GERAET); pushWeg(); zahlWeg(); }
+    else if (d.c41 === 'zaehler' && Number.isInteger(d.offen) && d.offen >= 0 && d.offen < 100) {
+      speichern(String(d.offen), ZAEHLER);
+      zahlSetzen();
+      if (d.offen) zahlFragen();
+    }
+  });
+} else {
+  document.body.insertAdjacentHTML('beforeend', `<div class="hinweis">
+<img src="../bilder/symbol-192.png" alt="Club 41 Österreich">
+<h1>Club 41 Übersicht</h1>
+<p>Bitte öffne die Seite über den Link aus der WhatsApp-Community des Clubs.</p></div>`);
+}
+// Ein neuer Link in einem schon offenen Tab ändert nur den Teil hinter dem „#“ und lädt die Seite sonst nicht neu.
+addEventListener('hashchange', () => location.reload());
+</script>
+</body>
+</html>
