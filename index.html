@@ -211,19 +211,31 @@ if (club) {
         || !gespeichert(GERAET) || document.querySelector('.zaehler')) return;
     document.body.insertAdjacentHTML('beforeend', `<div class="zaehler" role="dialog" aria-label="Mitteilungen">
 <p>Mitteilungen einschalten?</p>
-<small>Neue Nachrichten im Clubchat, Ankündigungen und Geburtstage melden sich am Handy, dazu die Zahl am App-Symbol.</small>
+<small>Neue Nachrichten im Allgemeinen Chat, Ankündigungen, Fotos und Geburtstage melden sich am Handy, dazu die Zahl am App-Symbol.</small>
 <div><button type="button" class="ja">Einschalten</button><button type="button" class="nein">Nein danke</button></div></div>`);
     const balken = document.querySelector('.zaehler');
     // Die Frage des Handys kommt nur direkt auf ein Tippen in dieser Seite, nicht aus dem Rahmen.
     balken.querySelector('.ja').addEventListener('click', () => {
       balken.remove();
-      Notification.requestPermission().then(() => { zahlSetzen(); pushHolen(); }, () => {});
+      Notification.requestPermission().then(() => { zahlSetzen(); pushHolen(); zustandMelden(); }, () => {});
     });
     balken.querySelector('.nein').addEventListener('click', () => {
       speichern('1', ZAEHLER_NEIN);
       balken.remove();
     });
   };
+  // Zustand der Mitteilungen für den Knopf „Mitteilungen aktivieren“ in der Chat-Übersicht (seit 30. Oktober 2026).
+  // Die Clubseite fragt nach dem Laden; die Antwort geht an das Fenster, das gefragt hat. Ändert sich der Zustand,
+  // etwa nach „Einschalten“ oder in den Einstellungen des iPhones, meldet die Seite ihn erneut.
+  let frager = null;
+  const zustand = () => (!symbolZahl || !alsApp ? 'unmoeglich' : Notification.permission === 'granted' ? 'an'
+    : Notification.permission === 'denied' ? 'gesperrt' : 'aus');
+  const zustandMelden = () => {
+    try { if (frager) frager.w.postMessage({ c41: 'mitteilungen', zustand: zustand() }, frager.o); } catch (e) {}
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') { pushHolen(); zustandMelden(); }
+  });
   // Der Service Worker zeigt die Mitteilungen an, auch wenn die App geschlossen ist.
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   pushHolen();
@@ -240,6 +252,9 @@ if (club) {
       zahlSetzen();
       if (d.offen) zahlFragen();
     }
+    else if (d.c41 === 'mitteilungen') { frager = { w: e.source, o: e.origin }; zustandMelden(); }
+    // Der Knopf in der Chat-Übersicht holt den Balken zurück, auch nach „Nein danke“.
+    else if (d.c41 === 'mitteilungenFragen') { vergessen(ZAEHLER_NEIN); zahlFragen(); }
   });
 } else {
   document.body.insertAdjacentHTML('beforeend', `<div class="hinweis">
