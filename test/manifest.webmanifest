@@ -1,0 +1,26 @@
+{
+  "id": "./",
+  "name": "C41 Test",
+  "short_name": "C41 Test",
+  "description": "Termine, Anmeldungen, Chat und Rundschreiben des Club 41 Grieskirchen-Hausruck.",
+  "lang": "de-AT",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F4F6F9",
+  "theme_color": "#154381",
+  "icons": [
+    {
+      "src": "../bilder/symbol-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "../bilder/symbol-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
