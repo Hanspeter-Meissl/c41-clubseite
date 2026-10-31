@@ -22,6 +22,13 @@ fragt einmal ein Balken unten, nur in der Web-App am Home-Bildschirm und nur, we
 merkt sich `c41-zaehler-nein`. Abmelden löscht die Zahl. `sw.js` tut noch nichts und ist die Grundlage für
 Mitteilungen in einer späteren Stufe.
 
+iPad und Windows (seit 31. Oktober 2026): Das iPad bekommt eigene `apple-touch-icon` in 152 und 167 Pixel. Unter
+Windows hängt die Seite `manifest.webmanifest` ein, Edge und Chrome bieten dann „Als App installieren“ an: eigenes
+Fenster, Clublogo in Startmenü und Taskleiste. Ein Balken fragt einmal danach, „Nein danke“ merkt sich
+`c41-installieren-nein`. Nur Windows bekommt das Manifest, weil iPhone und iPad der App am Home-Bildschirm einen
+eigenen Speicher geben und mit der Startadresse ohne Clubschlüssel öffnen würden. Die App unter Windows teilt den
+Speicher mit dem Browser und findet den gemerkten Schlüssel. Anheften an die Taskleiste macht das Mitglied selbst.
+
 Die Symbole in `bilder/` erzeugt `C41 Clubseite Symbole erzeugen.py` im Vault aus `Logo Club 41 Österreich.svg`;
 nicht von Hand ändern.
 
