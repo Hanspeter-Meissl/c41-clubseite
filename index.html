@@ -6,7 +6,15 @@
 <meta name="robots" content="noindex">
 <title>Club 41 Übersicht</title>
 <meta name="apple-mobile-web-app-title" content="Club 41">
+<meta name="theme-color" content="#154381">
+<!-- iPhone 180, iPad 152 und iPad Pro 167 Pixel (seit 31. Oktober 2026). Die Angabe ohne Größe bleibt für ältere
+     Geräte, die nur sie lesen. -->
 <link rel="apple-touch-icon" href="bilder/symbol-180.png">
+<link rel="apple-touch-icon" sizes="152x152" href="bilder/symbol-152.png">
+<link rel="apple-touch-icon" sizes="167x167" href="bilder/symbol-167.png">
+<link rel="apple-touch-icon" sizes="180x180" href="bilder/symbol-180.png">
+<!-- Die Verbindung zu Google wird schon aufgebaut, während diese Seite noch lädt; das spart beim Start einen Umlauf. -->
+<link rel="preconnect" href="https://script.google.com">
 <link rel="icon" type="image/png" sizes="192x192" href="bilder/symbol-192.png">
 <link rel="icon" type="image/png" sizes="32x32" href="bilder/symbol-32.png">
 <meta name="description" content="Termine, Anmeldungen und Rundschreiben des Club 41 Grieskirchen-Hausruck.">
@@ -59,6 +67,11 @@
   .zaehler button { font: inherit; font-weight: 600; border: 0; border-radius: 20px; padding: 8px 18px; cursor: pointer; }
   .zaehler .ja { background: #D19B5D; color: #1d1d1f; }
   .zaehler .nein { background: transparent; color: #fff; border: 1px solid #8FA6C8; }
+  /* Am PC und am iPad im Querformat nicht über die ganze Breite, sondern als Karte unten in der Mitte. */
+  @media (min-width: 700px) {
+    .zaehler { left: 50%; right: auto; bottom: 84px; width: 520px; transform: translateX(-50%); border-radius: 14px;
+      padding: 16px 18px; box-shadow: 0 6px 24px rgba(0, 0, 0, .25); }
+  }
 </style>
 </head>
 <body>
@@ -83,6 +96,13 @@ const ZAEHLER_NEIN = 'c41-zaehler-nein';
 // Ankündigungen und Geburtstage meldet. Firebase wird erst geladen, wenn das Gerät eingeloggt ist und Mitteilungen
 // erlaubt sind; vorher kostet es keine Ladezeit.
 const PUSH = 'c41-push';
+// App unter Windows (seit 31. Oktober 2026): Edge und Chrome installieren die Seite als eigenes Fenster mit dem
+// Clublogo in Startmenü und Taskleiste. Das Webmanifest dafür bekommt nur Windows. iPhone und iPad bleiben beim
+// erprobten Weg ohne Manifest: Die App am Home-Bildschirm hat dort einen eigenen Speicher und würde mit der
+// Startadresse des Manifests ohne Clubschlüssel öffnen. Unter Windows teilt die App den Speicher mit dem Browser
+// und findet den Schlüssel, den die Seite beim ersten Öffnen über den Link gemerkt hat.
+const WINDOWS = /Windows NT/.test(navigator.userAgent);
+const INSTALLIEREN_NEIN = 'c41-installieren-nein';
 const FIREBASE_SDK = ['https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js', 'firebase-config.js'];
 let firebaseBereit = null;
@@ -211,7 +231,7 @@ if (club) {
         || !gespeichert(GERAET) || document.querySelector('.zaehler')) return;
     document.body.insertAdjacentHTML('beforeend', `<div class="zaehler" role="dialog" aria-label="Mitteilungen">
 <p>Mitteilungen einschalten?</p>
-<small>Neue Nachrichten im Allgemeinen Chat, Ankündigungen, Fotos und Geburtstage melden sich am Handy, dazu die Zahl am App-Symbol.</small>
+<small>Neue Nachrichten im Allgemeinen Chat, Ankündigungen, Fotos und Geburtstage melden sich auf diesem Gerät, dazu die Zahl am App-Symbol.</small>
 <div><button type="button" class="ja">Einschalten</button><button type="button" class="nein">Nein danke</button></div></div>`);
     const balken = document.querySelector('.zaehler');
     // Die Frage des Handys kommt nur direkt auf ein Tippen in dieser Seite, nicht aus dem Rahmen.
@@ -236,6 +256,37 @@ if (club) {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') { pushHolen(); zustandMelden(); }
   });
+  // Unter Windows bietet ein Balken an, die Seite als App zu installieren, solange sie im Browser-Tab läuft. Der
+  // Browser meldet mit „beforeinstallprompt“, dass er das Manifest angenommen hat; das Fenster zur Installation
+  // öffnet er nur auf einen Klick in dieser Seite. „Nein danke“ merkt sich das; über das Symbol in der
+  // Adressleiste bleibt die Installation möglich.
+  if (WINDOWS) {
+    const m = document.createElement('link');
+    m.rel = 'manifest';
+    m.href = 'manifest.webmanifest';
+    document.head.appendChild(m);
+    addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      if (alsApp || gespeichert(INSTALLIEREN_NEIN) || document.querySelector('.zaehler')) return;
+      document.body.insertAdjacentHTML('beforeend', `<div class="zaehler" role="dialog" aria-label="Als App installieren">
+<p>Club 41 als App auf diesem PC?</p>
+<small>Die Clubseite öffnet dann in einem eigenen Fenster, mit dem Clublogo im Startmenü und in der Taskleiste.</small>
+<div><button type="button" class="ja">Installieren</button><button type="button" class="nein">Nein danke</button></div></div>`);
+      const balken = document.querySelector('.zaehler');
+      balken.querySelector('.ja').addEventListener('click', () => {
+        balken.remove();
+        e.prompt().catch(() => {});
+      });
+      balken.querySelector('.nein').addEventListener('click', () => {
+        speichern('1', INSTALLIEREN_NEIN);
+        balken.remove();
+      });
+    });
+    addEventListener('appinstalled', () => {
+      const balken = document.querySelector('.zaehler[aria-label="Als App installieren"]');
+      if (balken) balken.remove();
+    });
+  }
   // Der Service Worker zeigt die Mitteilungen an, auch wenn die App geschlossen ist.
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   pushHolen();
