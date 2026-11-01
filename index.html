@@ -297,6 +297,11 @@ if (club) {
     const d = e.data || {};
     if (d.c41 === 'anmelden' && /^[0-9a-f-]{36}$/.test(d.geraet)) { speichern(d.geraet, GERAET); pushHolen(); zahlFragen(); }
     else if (d.c41 === 'abmelden') { vergessen(GERAET); pushWeg(); zahlWeg(); location.reload(); }
+    // Nach einer Änderung in der Verwaltung neu laden und gleich den gewählten Reiter öffnen (seit 1. November 2026).
+    else if (d.c41 === 'neuladen' && /^[a-z]{1,20}$/.test(d.teil || '')) {
+      history.replaceState(null, '', '#' + club + '&teil=' + d.teil);
+      location.reload();
+    }
     else if (d.c41 === 'vergessen') { vergessen(GERAET); pushWeg(); zahlWeg(); }
     else if (d.c41 === 'zaehler' && Number.isInteger(d.offen) && d.offen >= 0 && d.offen < 100) {
       speichern(String(d.offen), ZAEHLER);
