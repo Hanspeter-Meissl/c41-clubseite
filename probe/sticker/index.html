@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="de-AT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Sticker-Probe</title>
+<style>
+  body{margin:0;padding:16px;background:#F4F6F9;color:#1d1d1f;font:16px/1.45 -apple-system,"Segoe UI",sans-serif}
+  h1{margin:0 0 4px;font-size:1.375rem;color:#154381}
+  h2{margin:22px 0 6px;font-size:1.0625rem;color:#154381}
+  p{margin:0 0 10px}
+  ol{margin:0 0 10px;padding-left:22px}
+  textarea,.rich{display:block;box-sizing:border-box;width:100%;min-height:64px;padding:10px;background:#fff;
+    border:1px solid #c9d1dc;border-radius:12px;font:inherit;color:inherit}
+  .rich:empty::before{content:attr(data-leer);color:#8a94a3}
+  .rich img,.rich picture{max-width:120px;max-height:120px}
+  button{min-height:44px;margin:6px 6px 0 0;padding:0 16px;border:0;border-radius:22px;background:#154381;color:#fff;font:inherit}
+  button.neben{background:#fff;color:#154381;border:1px solid #154381}
+  #bilder{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+  #bilder figure{margin:0;padding:8px;border-radius:12px;background:repeating-conic-gradient(#dfe5ec 0 25%,#fff 0 50%) 0 0/20px 20px;font-size:.75rem}
+  #bilder img{display:block;max-width:120px;max-height:120px}
+  #bilder figcaption{margin-top:4px;background:#fff;padding:2px 4px;border-radius:6px}
+  #log{margin:6px 0 0;padding:10px;min-height:80px;max-height:320px;overflow:auto;background:#fff;border:1px solid #c9d1dc;border-radius:12px;
+    font:.8125rem/1.4 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+  #meldung{min-height:1.4em;font-size:.875rem;color:#1b7a2f}
+</style>
+</head>
+<body>
+<h1>Sticker-Probe</h1>
+<p>Diese Seite prüft, ob das iPhone seine eigenen Sticker in die Felder der Clubseite einsetzt. Sie speichert und sendet nichts.</p>
+
+<h2>So gehen Sie vor</h2>
+<ol>
+  <li>In Feld 1 tippen, die Emoji-Tastatur öffnen und nach links wischen, bis die Sticker erscheinen. Einen Sticker antippen. Danach ein Emoji eingeben und ein Genmoji, falls vorhanden.</li>
+  <li>Dasselbe in Feld 2.</li>
+  <li>In Feld 1 und Feld 2 lange tippen und „Einfügen“ wählen, wenn Sie vorher einen Sticker kopiert haben (zum Beispiel in der App Nachrichten oder Fotos).</li>
+  <li>Unten „Ergebnis kopieren“ antippen und das Ergebnis im Chat einfügen.</li>
+</ol>
+
+<h2>Feld 1: einfaches Textfeld, wie heute in der Clubseite</h2>
+<textarea id="einfach" rows="2" placeholder="Hier Sticker einsetzen"></textarea>
+
+<h2>Feld 2: Feld mit Bildern</h2>
+<div id="rich" class="rich" contenteditable="true" data-leer="Hier Sticker einsetzen"></div>
+
+<h2>Empfangene Bilder</h2>
+<div id="bilder"></div>
+<p id="keinbild">Noch keines. Kariert hinterlegt, damit ein durchsichtiger Hintergrund sichtbar wird.</p>
+
+<h2>Protokoll</h2>
+<button type="button" id="kopieren">Ergebnis kopieren</button>
+<button type="button" class="neben" id="leeren">Leeren</button>
+<div id="meldung"></div>
+<div id="log"></div>
+
+<script>
+  const log = document.getElementById('log');
+  const zeilen = [];
+  const schreiben = text => {
+    zeilen.push(new Date().toLocaleTimeString('de-AT') + ' ' + text);
+    log.textContent = zeilen.join('\n');
+    log.scrollTop = log.scrollHeight;
+  };
+  schreiben('Gerät: ' + navigator.userAgent);
+  schreiben('Eigenständig geöffnet: ' + (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches));
+
+  const quelle = f => f.id === 'einfach' ? 'Feld 1' : 'Feld 2';
+  const gesehen = new Set();
+
+  // Bild anzeigen und prüfen, ob es durchsichtige Stellen hat: Die entscheiden, ob es ohne Blase als Sticker wirkt.
+  const bildZeigen = (herkunft, url, art, groesse) => {
+    if (gesehen.has(url)) return;
+    gesehen.add(url);
+    document.getElementById('keinbild').hidden = true;
+    const fig = document.createElement('figure');
+    const img = new Image();
+    const unter = document.createElement('figcaption');
+    fig.append(img, unter);
+    document.getElementById('bilder').append(fig);
+    img.onload = () => {
+      let durch = 'unbekannt';
+      try {
+        const c = document.createElement('canvas');
+        c.width = Math.min(img.naturalWidth, 256);
+        c.height = Math.min(img.naturalHeight, 256);
+        const g = c.getContext('2d');
+        g.drawImage(img, 0, 0, c.width, c.height);
+        const d = g.getImageData(0, 0, c.width, c.height).data;
+        let leer = 0;
+        for (let i = 3; i < d.length; i += 4) if (d[i] < 128) leer++;
+        durch = Math.round(leer * 400 / d.length) + ' % durchsichtig';
+      } catch (e) { durch = 'nicht messbar (' + e.name + ')'; }
+      const text = art + ', ' + img.naturalWidth + ' x ' + img.naturalHeight + (groesse ? ', ' + Math.round(groesse / 1024) + ' kB' : '') + ', ' + durch;
+      unter.textContent = text;
+      schreiben('BILD ' + herkunft + ': ' + text);
+    };
+    img.onerror = () => { unter.textContent = 'nicht darstellbar'; schreiben('BILD ' + herkunft + ': nicht darstellbar, ' + art + ', ' + url.slice(0, 60)); };
+    img.src = url;
+  };
+
+  const dateienLesen = (dt, herkunft) => {
+    if (!dt) return 'ohne Daten';
+    const arten = Array.from(dt.types || []);
+    const dateien = Array.from(dt.files || []);
+    dateien.forEach(d => { if (d.type.startsWith('image/')) bildZeigen(herkunft, URL.createObjectURL(d), d.type, d.size); });
+    return 'Arten [' + arten.join(', ') + '], Dateien [' + dateien.map(d => d.type + ' ' + d.size).join(', ') + ']';
+  };
+
+  // Was im Feld mit Bildern gelandet ist, als Kurzform; die Bilder selbst werden gezeigt.
+  const reichPruefen = () => {
+    const rich = document.getElementById('rich');
+    rich.querySelectorAll('img').forEach(i => {
+      const src = i.currentSrc || i.src;
+      fetch(src).then(r => r.blob()).then(b => bildZeigen('Feld 2 im Inhalt', src, b.type || 'unbekannt', b.size))
+        .catch(e => { schreiben('Feld 2: Bild nicht lesbar: ' + e.name + ', ' + src.slice(0, 60)); bildZeigen('Feld 2 im Inhalt', src, 'nicht lesbar', 0); });
+    });
+    const knoten = Array.from(rich.querySelectorAll('*')).map(k => k.nodeName.toLowerCase()).join(' ');
+    return 'Knoten [' + knoten + '], Text "' + rich.textContent.slice(-30) + '"';
+  };
+
+  [document.getElementById('einfach'), document.getElementById('rich')].forEach(f => {
+    f.addEventListener('beforeinput', ev => schreiben(quelle(f) + ' beforeinput ' + ev.inputType + ', Daten "' + (ev.data || '') + '", ' + dateienLesen(ev.dataTransfer, quelle(f))));
+    f.addEventListener('input', ev => schreiben(quelle(f) + ' input ' + ev.inputType + ', Daten "' + (ev.data || '') + '", '
+      + (f.id === 'rich' ? reichPruefen() : 'Text "' + f.value.slice(-30) + '"')));
+    f.addEventListener('paste', ev => schreiben(quelle(f) + ' paste ' + dateienLesen(ev.clipboardData, quelle(f))));
+    f.addEventListener('drop', ev => schreiben(quelle(f) + ' drop ' + dateienLesen(ev.dataTransfer, quelle(f))));
+  });
+
+  document.getElementById('leeren').addEventListener('click', () => {
+    zeilen.length = 2;
+    log.textContent = zeilen.join('\n');
+    document.getElementById('einfach').value = '';
+    document.getElementById('rich').textContent = '';
+    document.getElementById('bilder').textContent = '';
+    document.getElementById('keinbild').hidden = false;
+    gesehen.clear();
+  });
+  document.getElementById('kopieren').addEventListener('click', () => {
+    const merker = document.createElement('textarea');
+    merker.value = zeilen.join('\n');
+    merker.style.position = 'fixed';
+    merker.style.opacity = '0';
+    document.body.append(merker);
+    merker.select();
+    merker.setSelectionRange(0, merker.value.length);
+    const ok = document.execCommand('copy');
+    merker.remove();
+    document.getElementById('meldung').textContent = ok ? 'Kopiert. Bitte im Chat einfügen.' : 'Kopieren ging nicht. Bitte ein Bildschirmfoto des Protokolls schicken.';
+  });
+</script>
+</body>
+</html>
