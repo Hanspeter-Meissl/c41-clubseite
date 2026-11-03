@@ -176,8 +176,13 @@ if (club) {
     laden.classList.add('fertig');
     setTimeout(() => laden.remove(), 400);
   }, { once: true });
+  // Die Kennung für Mitteilungen geht nur mit, solange sie erlaubt sind; sonst vergisst die Seite sie. Nach dem
+  // Ausschalten am Handy meldet Firebase die Kennung bei der nächsten Mitteilung als abgemeldet, die Clubseite löscht
+  // sie, und das nächste Laden trug sie bis zum 3. November 2026 wieder ein: Das Mitglied galt in „Mitglieder in der
+  // App“ weiter als „mit Mitteilungen“. Nach dem Wiedereinschalten holt pushHolen() die Kennung neu.
   const adresse = () => {
     const geraet = gespeichert(GERAET);
+    if (!('Notification' in window) || Notification.permission !== 'granted') vergessen(PUSH);
     const push = geraet && gespeichert(PUSH);
     return GOOGLE + '?club=' + encodeURIComponent(club) + (teil ? '&teil=' + encodeURIComponent(teil) : '')
       + (geraet ? '&ich=' + encodeURIComponent(geraet) : '') + (push ? '&push=' + encodeURIComponent(push) : '');
