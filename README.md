@@ -33,6 +33,9 @@ Speicher mit dem Browser und findet den gemerkten Schlüssel. Anheften an die Ta
 Die Symbole in `bilder/` erzeugt `C41 Clubseite Symbole erzeugen.py` im Vault aus `Logo Club 41 Österreich.svg`;
 nicht von Hand ändern.
 
+Der Ordner `emoji/` enthält die Flaggenschrift für Windows und die vollständige Emoji-Auswahl am PC. Die Clubseite lädt
+diese Dateien erst, wenn sie gebraucht werden; Betrieb und Testumgebung nutzen dieselben. Siehe `emoji/LIESMICH.md`.
+
 Nichts Geheimes in dieses Repository: Es ist öffentlich. Die Adresse der Web-App darf hinein, der Clubschlüssel nie.
 
 Die Probe für Mitteilungen über Firebase (`probe/`, 29. Oktober 2026) ist nach der Umstellung am 31. Oktober 2026
