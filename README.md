@@ -36,6 +36,9 @@ nicht von Hand ändern.
 Der Ordner `emoji/` enthält die Flaggenschrift für Windows und die vollständige Emoji-Auswahl am PC. Die Clubseite lädt
 diese Dateien erst, wenn sie gebraucht werden; Betrieb und Testumgebung nutzen dieselben. Siehe `emoji/LIESMICH.md`.
 
+Gerät (seit 5. November 2026): Eingeloggt hängt die Seite `&art=` an die Adresse der Web-App, etwa `iPhone|393x852|3` oder
+`Android|412x915|2.6|SM-S921B`, für „Mitglieder in der App“. Das Android-Modell merkt sie in `c41-modell`. Am PC nur die Plattform.
+
 Nichts Geheimes in dieses Repository: Es ist öffentlich. Die Adresse der Web-App darf hinein, der Clubschlüssel nie.
 
 Die Probe für Mitteilungen über Firebase (`probe/`, 29. Oktober 2026) ist nach der Umstellung am 31. Oktober 2026
