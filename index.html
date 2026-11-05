@@ -103,8 +103,15 @@ const PUSH = 'c41-push';
 // und findet den Schlüssel, den die Seite beim ersten Öffnen über den Link gemerkt hat.
 // Android (seit 4. November 2026): Ohne Manifest bot Chrome nur eine Verknüpfung an und meldete „Diese App kann nicht
 // installiert werden“. Die App teilt dort wie unter Windows den Speicher mit dem Browser.
+// Nur Chrome bekommt das Manifest (seit 5. November 2026): Samsung Internet baut beim Installieren ein eigenes App-Paket,
+// das Google Play Protect mit „Unsichere App blockiert“ abweist (Gernot Lehner). Die anderen Android-Browser bekommen
+// stattdessen einen Balken, der die Seite in Chrome öffnet. Die Marke zählt, weil Chrome/ auch in Samsung Internet,
+// Edge und Opera in der Kennung steht; ältere Browser ohne userAgentData prüft die Kennung.
 const WINDOWS = /Windows NT/.test(navigator.userAgent);
 const ANDROID = /Android/.test(navigator.userAgent);
+const CHROME = navigator.userAgentData
+  ? navigator.userAgentData.brands.some(b => b.brand === 'Google Chrome')
+  : /Chrome\//.test(navigator.userAgent) && !/SamsungBrowser|EdgA|OPR|OPT|; wv\)/.test(navigator.userAgent);
 const INSTALLIEREN_NEIN = 'c41-installieren-nein';
 const FIREBASE_SDK = ['https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js', 'firebase-config.js'];
@@ -271,7 +278,7 @@ if (club) {
   // Browser meldet mit „beforeinstallprompt“, dass er das Manifest angenommen hat; das Fenster zur Installation
   // öffnet er nur auf einen Klick in dieser Seite. „Nein danke“ merkt sich das; über das Symbol in der
   // Adressleiste bleibt die Installation möglich.
-  if (WINDOWS || ANDROID) {
+  if (WINDOWS || (ANDROID && CHROME)) {
     const m = document.createElement('link');
     m.rel = 'manifest';
     m.href = 'manifest.webmanifest';
@@ -297,6 +304,24 @@ if (club) {
     addEventListener('appinstalled', () => {
       const balken = document.querySelector('.zaehler[aria-label="Als App installieren"]');
       if (balken) balken.remove();
+    });
+  } else if (ANDROID && !alsApp && !gespeichert(INSTALLIEREN_NEIN)) {
+    // Der Clubschlüssel geht im Teil hinter dem „#“ mit, weil Chrome den Speicher dieses Browsers nicht kennt. Android
+    // teilt die Adresse am letzten „#“, das erste bleibt deshalb Teil der Seitenadresse. Fehlt Chrome, führt die
+    // Ersatzadresse in den Play Store. Den Geräteschlüssel gibt die Seite nie in eine Adresse, in Chrome loggt sich
+    // das Mitglied deshalb einmal neu ein.
+    const inChrome = 'intent://' + location.host + location.pathname + '#' + club + (teil ? '&teil=' + encodeURIComponent(teil) : '')
+      + '#Intent;scheme=' + location.protocol.slice(0, -1) + ';package=com.android.chrome;S.browser_fallback_url='
+      + encodeURIComponent('https://play.google.com/store/apps/details?id=com.android.chrome') + ';end';
+    document.body.insertAdjacentHTML('beforeend', `<div class="zaehler" role="dialog" aria-label="In Chrome öffnen">
+<p>Für die App bitte in Chrome öffnen</p>
+<small>In diesem Browser blockiert Android die Installation der Club-41-App. In Chrome geht es, und nur als App sind Mitteilungen möglich. Dort einmal neu einloggen.</small>
+<div><button type="button" class="ja">In Chrome öffnen</button><button type="button" class="nein">Nein danke</button></div></div>`);
+    const balken = document.querySelector('.zaehler[aria-label="In Chrome öffnen"]');
+    balken.querySelector('.ja').addEventListener('click', () => { location.href = inChrome; });
+    balken.querySelector('.nein').addEventListener('click', () => {
+      speichern('1', INSTALLIEREN_NEIN);
+      balken.remove();
     });
   }
   // Der Service Worker zeigt die Mitteilungen an, auch wenn die App geschlossen ist.
