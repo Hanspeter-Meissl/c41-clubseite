@@ -30,6 +30,9 @@ Frage nach Mitteilungen hängt dort nicht an `setAppBadge`. iPhone und iPad beko
 eigenen Speicher geben und mit der Startadresse ohne Clubschlüssel öffnen würden. Die App unter Windows und Android teilt den
 Speicher mit dem Browser und findet den gemerkten Schlüssel. Anheften an die Taskleiste macht das Mitglied selbst.
 
+Android-Browser außer Chrome bekommen das Manifest seit 5. November 2026 nicht mehr, weil Google Play Protect die Installation aus Samsung Internet blockiert. Dort zeigt die Seite den Balken
+„Für die App bitte in Chrome öffnen“; sein Knopf öffnet die Seite über einen `intent://`-Link in Chrome und gibt den Clubschlüssel mit, nicht den Geräteschlüssel. „Nein danke“ merkt sich `c41-installieren-nein`.
+
 Die Symbole in `bilder/` erzeugt `C41 Clubseite Symbole erzeugen.py` im Vault aus `Logo Club 41 Österreich.svg`;
 nicht von Hand ändern.
 
