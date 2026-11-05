@@ -112,6 +112,25 @@ const ANDROID = /Android/.test(navigator.userAgent);
 const CHROME = navigator.userAgentData
   ? navigator.userAgentData.brands.some(b => b.brand === 'Google Chrome')
   : /Chrome\//.test(navigator.userAgent) && !/SamsungBrowser|EdgA|OPR|OPT|; wv\)/.test(navigator.userAgent);
+// Gerät für „Mitglieder in der App“ (seit 5. November 2026, Wunsch von Hanspeter): Google reicht der Web-App die Kennung
+// des Browsers nicht durch, deshalb nennt die Einstiegsseite sie wie den Geräteschlüssel, als „&art=“. Das Modell eines
+// iPhones verrät kein Browser, nur die Bildschirmmaße; der Server macht daraus die mögliche Modellgruppe. Android nennt das
+// Modell über userAgentData, und das nur hier oben, nicht im Rahmen. Die Antwort kommt verzögert, deshalb geht sie erst beim
+// nächsten Öffnen mit. Am PC keine Maße: Sie ändern sich mit dem Zoom, und jede Änderung wäre ein Schreibzugriff.
+const MODELL = 'c41-modell';
+function geraetArt(n, s, faktor, modell) {
+  const ua = n.userAgent;
+  const masse = [s.width, s.height].sort((a, b) => a - b).join('x') + '|' + Math.round(faktor * 10) / 10;
+  if (/iPhone/.test(ua)) return 'iPhone|' + masse;
+  // Das iPad nennt sich in Safari „Macintosh“; ein Mac hat keinen Touchscreen.
+  if (/iPad/.test(ua) || (/Macintosh/.test(ua) && n.maxTouchPoints > 1)) return 'iPad|' + masse;
+  if (/Android/.test(ua)) {
+    const inKennung = (ua.match(/Android [\d.]+; ([^;)]+)/) || [])[1] || '';
+    const name = modell || (inKennung === 'K' ? '' : inKennung.split(' Build')[0]);
+    return 'Android|' + masse + '|' + name.replace(/[^\w .-]/g, '').slice(0, 40);
+  }
+  return /Windows NT/.test(ua) ? 'Windows' : /Macintosh/.test(ua) ? 'Mac' : 'Anderes';
+}
 const INSTALLIEREN_NEIN = 'c41-installieren-nein';
 const FIREBASE_SDK = ['https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js', 'firebase-config.js'];
@@ -192,10 +211,14 @@ if (club) {
     if (!('Notification' in window) || Notification.permission !== 'granted') vergessen(PUSH);
     const push = geraet && gespeichert(PUSH);
     return GOOGLE + '?club=' + encodeURIComponent(club) + (teil ? '&teil=' + encodeURIComponent(teil) : '')
-      + (geraet ? '&ich=' + encodeURIComponent(geraet) : '') + (push ? '&push=' + encodeURIComponent(push) : '');
+      + (geraet ? '&ich=' + encodeURIComponent(geraet) : '') + (push ? '&push=' + encodeURIComponent(push) : '')
+      + (geraet ? '&art=' + encodeURIComponent(geraetArt(navigator, screen, devicePixelRatio, gespeichert(MODELL))) : '');
   };
   f.src = adresse();
   document.body.appendChild(f);
+  if (ANDROID && navigator.userAgentData && gespeichert(GERAET) && !gespeichert(MODELL)) {
+    navigator.userAgentData.getHighEntropyValues(['model']).then(w => { if (w.model) speichern(w.model, MODELL); }, () => {});
+  }
 
   // Nachrichten der Clubseite nach dem Einloggen und Abmelden. Angenommen wird nur, was aus dem eigenen Rahmen
   // kommt: Der Absender muss dieser Rahmen oder ein Rahmen darin sein, nicht nur irgendeine Google-Adresse.
