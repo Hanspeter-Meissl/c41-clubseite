@@ -12,7 +12,7 @@ self.addEventListener('push', e => {
   if (inhalt.data && (inhalt.fcmMessageId || inhalt.from)) inhalt = inhalt.data;
   const zahl = inhalt.zahl === undefined || inhalt.zahl === '' ? null : Number(inhalt.zahl);
   // Gleicher „tag“ ersetzt die vorige Mitteilung, so bündelt der Clubchat mehrere Nachrichten zu einer.
-  const art = { body: inhalt.text || '', icon: '../bilder/probe-edelweiss/symbol-192.png' };
+  const art = { body: inhalt.text || '', icon: '../bilder/probe-pin11/symbol-192.png' };
   // „leise“ (etwa der fünfte Glückwunsch) ersetzt die vorige ohne Ton.
   if (inhalt.tag) { art.tag = inhalt.tag; art.renotify = inhalt.leise !== '1'; }
   // iOS entzieht die Erlaubnis, wenn auf eine Mitteilung hin nichts angezeigt wird; deshalb immer anzeigen.
