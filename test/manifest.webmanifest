@@ -11,19 +11,19 @@
   "theme_color": "#154381",
   "icons": [
     {
-      "src": "../bilder/probe-pin11/symbol-192.png",
+      "src": "../bilder/symbol-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "../bilder/probe-pin11/symbol-512.png",
+      "src": "../bilder/symbol-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "../bilder/probe-pin11/symbol-maskable-512.png",
+      "src": "../bilder/symbol-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
