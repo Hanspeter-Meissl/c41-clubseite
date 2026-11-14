@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Probe Standort</title>
+<!-- Probe vom 14. November 2026, vorübergehend: Geht der Standort in der Clubseite, wenn die Einstiegsseite den Rahmen
+     von Google mit allow="geolocation" einbettet? Drei Fälle: diese Seite selbst, Rahmen mit und Rahmen ohne „allow“.
+     Die Adresse der Test-Web-App steht hinter dem „#“. Zeigt nur Erfolg und Genauigkeit, nicht den Ort. -->
+<style>
+  body { font: 17px -apple-system, BlinkMacSystemFont, sans-serif; margin: 16px; color: #1d1d1f; }
+  h2 { font-size: 1.1rem; margin: 22px 0 6px; }
+  button { font: inherit; padding: 10px 16px; }
+  iframe { width: 100%; height: 170px; border: 1px solid #c7ccd4; border-radius: 10px; }
+  #oben { margin: 8px 0 0; }
+</style>
+</head>
+<body>
+<h1>Probe Standort</h1>
+<p>Bitte in jedem der drei Teile auf „Standort abfragen“ tippen und die Frage des iPhones erlauben.</p>
+<h2>1. Diese Seite selbst</h2>
+<button type="button" id="selbst">Standort abfragen</button>
+<p id="oben">noch nicht abgefragt</p>
+<h2>2. Rahmen mit Erlaubnis (allow="geolocation")</h2>
+<div id="mit"></div>
+<h2>3. Rahmen ohne Erlaubnis, wie heute</h2>
+<div id="ohne"></div>
+<script>
+  const ziel = decodeURIComponent(location.hash.slice(1));
+  const rahmen = (wo, erlaubt) => {
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(ziel)) { document.getElementById(wo).textContent = 'Adresse der Test-Web-App fehlt hinter dem #.'; return; }
+    const f = document.createElement('iframe');
+    if (erlaubt) f.allow = 'geolocation';
+    f.src = ziel + '?probe=standort';
+    document.getElementById(wo).append(f);
+  };
+  rahmen('mit', true);
+  rahmen('ohne', false);
+  const oben = document.getElementById('oben');
+  document.getElementById('selbst').addEventListener('click', () => {
+    if (!navigator.geolocation) { oben.textContent = 'Kein navigator.geolocation'; return; }
+    oben.textContent = 'Wird abgefragt …';
+    navigator.geolocation.getCurrentPosition(
+      p => { oben.textContent = 'GEHT: Standort erhalten, Genauigkeit ' + Math.round(p.coords.accuracy) + ' m'; },
+      f => { oben.textContent = 'GEHT NICHT: Fehler ' + f.code + ', ' + f.message; },
+      { enableHighAccuracy: true, timeout: 20000 });
+  });
+</script>
+</body>
+</html>
