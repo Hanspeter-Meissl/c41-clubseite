@@ -1,6 +1,6 @@
 # Clubseite, Club 41
 
-Einstiegsseite zur Clubseite des Club 41 Grieskirchen-Hausruck. Veröffentlicht über GitHub Pages.
+Einstiegsseite zur Clubseite des Club 41 Grieskirchen. Veröffentlicht über GitHub Pages.
 
 Die Clubseite selbst ist die Google-Web-App „C41 Clubseite“ (Konstante `GOOGLE` in `index.html`, Quelle
 `03 Bereiche/Club C41/Clubseite/Google/Code.gs` im Vault). Google legt um jede Web-App einen eigenen Rahmen, in
