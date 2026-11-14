@@ -197,6 +197,30 @@ if (club) {
 
   const f = document.createElement('iframe');
   f.title = 'Club 41 Übersicht';
+  // Messpunkte (M0, seit 14. November 2026): Sekunden vom Öffnen der Seite bis Rahmen geladen, Clubseite bereit,
+  // „Meine Übersicht“ da und Chat da, je Start eine Zeile, die letzten zehn auf diesem Gerät. Die Clubseite meldet ihre
+  // zwei Punkte und fragt die Liste für die Startseite der Verwaltung ab. War die Seite zwischendurch im Hintergrund,
+  // ist die Zeile markiert, weil die Zeit dann nicht stimmt. Gezählt wird nur der erste Wert je Punkt und Start.
+  const MESSUNG = 'c41-messung';
+  const MESS_ZAHL = 10;
+  const MESS_PUNKTE = ['rahmen', 'bereit', 'uebersicht', 'chat'];
+  const messStart = { z: Date.now() };
+  const messSichern = () => {
+    let liste = [];
+    try { liste = JSON.parse(gespeichert(MESSUNG) || '[]'); } catch (e) { liste = []; }
+    if (!Array.isArray(liste)) liste = [];
+    liste = liste.filter(m => m && m.z !== messStart.z).concat([messStart]).slice(-MESS_ZAHL);
+    speichern(JSON.stringify(liste), MESSUNG);
+  };
+  const messen = was => {
+    if (MESS_PUNKTE.indexOf(was) < 0 || messStart[was] !== undefined) return;
+    messStart[was] = Math.round(performance.now() / 100) / 10;
+    messSichern();
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && !messStart.weg && messStart.chat === undefined) { messStart.weg = true; messSichern(); }
+  });
+  f.addEventListener('load', () => messen('rahmen'), { once: true });
   // Ladefehler (A3, seit 14. November 2026): Bis dahin verschwand die Ladeanzeige beim ersten „load“ des Rahmens, auch
   // wenn Google eine Fehlerseite lieferte. In der App am Home-Bildschirm gibt es keinen Knopf zum Neuladen, das Mitglied
   // sah die Fehlerseite, bis es die App ganz schloss. Jetzt verschwindet die Anzeige erst mit der Meldung „bereit“ der
@@ -208,9 +232,11 @@ if (club) {
   const fertig = () => {
     if (bereit) return;
     bereit = true;
+    messen('bereit');
     uhren.forEach(clearTimeout);
     laden.classList.add('fertig');
     setTimeout(() => laden.remove(), 400);
+    pushHolen();
   };
   const gescheitert = () => {
     if (bereit) return;
@@ -271,12 +297,19 @@ if (club) {
   };
   // Kennung bei Firebase holen, sobald das Gerät eingeloggt ist und Mitteilungen erlaubt sind. Ist sie neu, lädt
   // der Rahmen einmal mit „&push=“ neu, damit die Clubseite sie sich merkt.
-  const pushHolen = () => {
+  // Seit 14. November 2026 (S4) erst nach der Meldung „bereit“ und höchstens einmal am Tag, weil Firebase zwei Skripte
+  // von Google nachlädt, während die Clubseite noch lädt. Sofort geht es ohne gespeicherte Kennung, nach dem Einloggen
+  // und nach „Einschalten“.
+  const PUSH_ZEIT = 'c41-push-zeit';
+  const PUSH_TAG_MS = 86400000;
+  const pushHolen = sofort => {
     if (!gespeichert(GERAET) || !('Notification' in window) || Notification.permission !== 'granted'
         || !('serviceWorker' in navigator)) return;
+    if (!sofort && gespeichert(PUSH) && Date.now() - (Number(gespeichert(PUSH_ZEIT)) || 0) < PUSH_TAG_MS) return;
     navigator.serviceWorker.ready
       .then(reg => firebaseLaden().then(m => m.getToken({ vapidKey: window.FIREBASE.vapidKey, serviceWorkerRegistration: reg })))
       .then(token => {
+        if (token) speichern(String(Date.now()), PUSH_ZEIT);
         if (!token || token === gespeichert(PUSH)) return;
         speichern(token, PUSH);
         f.src = adresse();
@@ -299,7 +332,7 @@ if (club) {
     // Die Frage des Handys kommt nur direkt auf ein Tippen in dieser Seite, nicht aus dem Rahmen.
     balken.querySelector('.ja').addEventListener('click', () => {
       balken.remove();
-      Notification.requestPermission().then(() => { zahlSetzen(); pushHolen(); zustandMelden(); }, () => {});
+      Notification.requestPermission().then(() => { zahlSetzen(); pushHolen(true); zustandMelden(); }, () => {});
     });
     balken.querySelector('.nein').addEventListener('click', () => {
       speichern('1', ZAEHLER_NEIN);
@@ -316,7 +349,7 @@ if (club) {
     try { if (frager) frager.w.postMessage({ c41: 'mitteilungen', zustand: zustand() }, frager.o); } catch (e) {}
   };
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') { pushHolen(); zustandMelden(); }
+    if (document.visibilityState === 'visible') { if (bereit) pushHolen(); zustandMelden(); }
   });
   // Unter Windows bietet ein Balken an, die Seite als App zu installieren, solange sie im Browser-Tab läuft. Der
   // Browser meldet mit „beforeinstallprompt“, dass er das Manifest angenommen hat; das Fenster zur Installation
@@ -370,14 +403,13 @@ if (club) {
   }
   // Der Service Worker zeigt die Mitteilungen an, auch wenn die App geschlossen ist.
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
-  pushHolen();
   zahlFragen();
 
   addEventListener('message', e => {
     if (!HERKUNFT.test(e.origin) || !ausDemRahmen(e.source)) return;
     const d = e.data || {};
     if (d.c41 === 'bereit') fertig();
-    else if (d.c41 === 'anmelden' && /^[0-9a-f-]{36}$/.test(d.geraet)) { speichern(d.geraet, GERAET); pushHolen(); zahlFragen(); }
+    else if (d.c41 === 'anmelden' && /^[0-9a-f-]{36}$/.test(d.geraet)) { speichern(d.geraet, GERAET); pushHolen(true); zahlFragen(); }
     else if (d.c41 === 'abmelden') { vergessen(GERAET); pushWeg(); zahlWeg(); location.reload(); }
     // Nach einer Änderung in der Verwaltung neu laden und gleich den gewählten Reiter öffnen (seit 1. November 2026).
     else if (d.c41 === 'neuladen' && /^[a-z]{1,20}$/.test(d.teil || '')) {
@@ -393,6 +425,12 @@ if (club) {
     else if (d.c41 === 'mitteilungen') { frager = { w: e.source, o: e.origin }; zustandMelden(); }
     // Der Knopf in der Chat-Übersicht holt den Balken zurück, auch nach „Nein danke“.
     else if (d.c41 === 'mitteilungenFragen') { vergessen(ZAEHLER_NEIN); zahlFragen(); }
+    else if (d.c41 === 'messpunkt') messen(d.was);
+    else if (d.c41 === 'messwerte') {
+      let liste = [];
+      try { liste = JSON.parse(gespeichert(MESSUNG) || '[]'); } catch (err) { liste = []; }
+      try { e.source.postMessage({ c41: 'messwerte', liste: Array.isArray(liste) ? liste : [] }, e.origin); } catch (err) {}
+    }
   });
 } else {
   document.body.insertAdjacentHTML('beforeend', `<div class="hinweis">
