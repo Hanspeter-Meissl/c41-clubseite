@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "Club 41 Grieskirchen-Hausruck",
+  "name": "Club 41 Grieskirchen",
   "short_name": "Club 41",
-  "description": "Termine, Anmeldungen, Chat und Rundschreiben des Club 41 Grieskirchen-Hausruck.",
+  "description": "Termine, Anmeldungen, Chat und Rundschreiben des Club 41 Grieskirchen.",
   "lang": "de-AT",
   "start_url": "./",
   "scope": "./",
