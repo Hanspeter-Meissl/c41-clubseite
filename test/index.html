@@ -54,7 +54,7 @@
   .laden .zusatz { max-width: 300px; font-size: 14px; color: #595959; }
   .laden [hidden] { display: none; }
   .laden button {
-    font: inherit; font-weight: 600; border: 0; border-radius: 20px; padding: 8px 18px;
+    font: inherit; font-weight: 600; border: 0; border-radius: 22px; padding: 8px 22px; min-height: 44px;
     background: #D19B5D; color: #1d1d1f; cursor: pointer;
   }
   /* Frage nach der Zahl am App-Symbol, unten über dem Rahmen. */
@@ -200,11 +200,32 @@ if (club) {
 
   const f = document.createElement('iframe');
   f.title = 'Club 41 Übersicht';
-  f.addEventListener('load', () => {
+  // Ladefehler (A3, seit 14. November 2026): Bis dahin verschwand die Ladeanzeige beim ersten „load“ des Rahmens, auch
+  // wenn Google eine Fehlerseite lieferte. In der App am Home-Bildschirm gibt es keinen Knopf zum Neuladen, das Mitglied
+  // sah die Fehlerseite, bis es die App ganz schloss. Jetzt verschwindet die Anzeige erst mit der Meldung „bereit“ der
+  // Clubseite. Kommt sie bis 10 Sekunden nach dem Laden nicht, zeigt die Anzeige „Neu laden“. Kommt sie später doch,
+  // verschwindet die Anzeige trotzdem. Deshalb geht Code.gs mit der Meldung vor dieser Seite live, sonst sähe jedes
+  // Mitglied die Fehleranzeige.
+  const BEREIT_MS = 10000;
+  let bereit = false;
+  const fertig = () => {
+    if (bereit) return;
+    bereit = true;
     uhren.forEach(clearTimeout);
     laden.classList.add('fertig');
     setTimeout(() => laden.remove(), 400);
-  }, { once: true });
+  };
+  const gescheitert = () => {
+    if (bereit) return;
+    uhren.forEach(clearTimeout);
+    laden.querySelector('.rad').hidden = true;
+    laden.querySelector('.text').textContent = 'Die Clubseite konnte nicht geladen werden';
+    lang.hidden = true;
+    sehrLang.textContent = 'Bitte neu laden. Bleibt es dabei, öffne die Seite über den Link aus der WhatsApp-Community.';
+    sehrLang.hidden = false;
+    knopf.hidden = false;
+  };
+  f.addEventListener('load', () => { if (!bereit) uhren.push(setTimeout(gescheitert, BEREIT_MS)); }, { once: true });
   // Die Kennung für Mitteilungen geht nur mit, solange sie erlaubt sind; sonst vergisst die Seite sie. Nach dem
   // Ausschalten am Handy meldet Firebase die Kennung bei der nächsten Mitteilung als abgemeldet, die Clubseite löscht
   // sie, und das nächste Laden trug sie bis zum 3. November 2026 wieder ein: Das Mitglied galt in „Mitglieder in der
@@ -358,7 +379,8 @@ if (club) {
   addEventListener('message', e => {
     if (!HERKUNFT.test(e.origin) || !ausDemRahmen(e.source)) return;
     const d = e.data || {};
-    if (d.c41 === 'anmelden' && /^[0-9a-f-]{36}$/.test(d.geraet)) { speichern(d.geraet, GERAET); pushHolen(); zahlFragen(); }
+    if (d.c41 === 'bereit') fertig();
+    else if (d.c41 === 'anmelden' && /^[0-9a-f-]{36}$/.test(d.geraet)) { speichern(d.geraet, GERAET); pushHolen(); zahlFragen(); }
     else if (d.c41 === 'abmelden') { vergessen(GERAET); pushWeg(); zahlWeg(); location.reload(); }
     // Nach einer Änderung in der Verwaltung neu laden und gleich den gewählten Reiter öffnen (seit 1. November 2026).
     else if (d.c41 === 'neuladen' && /^[a-z]{1,20}$/.test(d.teil || '')) {
