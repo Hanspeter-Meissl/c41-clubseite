@@ -197,6 +197,9 @@ if (club) {
 
   const f = document.createElement('iframe');
   f.title = 'Club 41 Übersicht';
+  // Standort im Chat (seit 15. November 2026): Der Rahmen von Google erlaubt ihn, dieser Rahmen muss ihn weitergeben,
+  // sonst lehnt das iPhone ab (Probe vom 14. November 2026). Gefragt wird das Mitglied trotzdem beim ersten Mal.
+  f.allow = 'geolocation';
   // Messpunkte (M0, seit 14. November 2026): Sekunden vom Öffnen der Seite bis Rahmen geladen, Clubseite bereit,
   // „Meine Übersicht“ da und Chat da, je Start eine Zeile, die letzten zehn auf diesem Gerät. Die Clubseite meldet ihre
   // zwei Punkte und fragt die Liste für die Startseite der Verwaltung ab. War die Seite zwischendurch im Hintergrund,
