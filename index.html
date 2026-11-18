@@ -204,7 +204,9 @@ if (club) {
   f.title = 'Club 41 Übersicht';
   // Standort im Chat (seit 15. November 2026): Der Rahmen von Google erlaubt ihn, dieser Rahmen muss ihn weitergeben,
   // sonst lehnt das iPhone ab (Probe vom 14. November 2026). Gefragt wird das Mitglied trotzdem beim ersten Mal.
-  f.allow = 'geolocation';
+  // Teilen und Kopieren im Chat (E4, seit 18. November 2026, Probe im Test): Ein fremder Rahmen braucht dafür web-share
+  // und clipboard-write. Ob Googles innerer Rahmen beides weitergibt, zeigt erst die Probe am iPhone.
+  f.allow = 'geolocation; web-share; clipboard-write';
   // Messpunkte (M0, seit 14. November 2026): Sekunden vom Öffnen der Seite bis Rahmen geladen, Clubseite bereit,
   // „Meine Übersicht“ da und Chat da, je Start eine Zeile, die letzten zehn auf diesem Gerät. Die Clubseite meldet ihre
   // zwei Punkte und fragt die Liste für die Startseite der Verwaltung ab. War die Seite zwischendurch im Hintergrund,
@@ -255,7 +257,22 @@ if (club) {
     sehrLang.textContent = 'Bitte neu laden. Bleibt es dabei, öffne die Seite über den Link aus der WhatsApp-Community.';
     sehrLang.hidden = false;
     knopf.hidden = false;
+    if (!navigator.onLine) keinNetz();
   };
+  // Ohne Netz (E4, seit 18. November 2026): gleich „Keine Verbindung“ statt nach 10 bis 30 Sekunden „Die Clubseite konnte
+  // nicht geladen werden“. Kommt das Netz zurück, lädt die Seite von selbst neu; der Knopf bleibt für alle Fälle.
+  const keinNetz = () => {
+    if (bereit) return;
+    uhren.forEach(clearTimeout);
+    laden.querySelector('.rad').hidden = true;
+    laden.querySelector('.text').textContent = 'Keine Verbindung';
+    lang.hidden = true;
+    sehrLang.textContent = 'Das Gerät ist gerade nicht mit dem Internet verbunden. Sobald es wieder Netz hat, lädt die Seite von selbst.';
+    sehrLang.hidden = false;
+    knopf.hidden = false;
+    addEventListener('online', () => location.reload(), { once: true });
+  };
+  if (!navigator.onLine) keinNetz();
   f.addEventListener('load', () => { if (!bereit) uhren.push(setTimeout(gescheitert, BEREIT_MS)); }, { once: true });
   // Die Kennung für Mitteilungen geht nur mit, solange sie erlaubt sind; sonst vergisst die Seite sie. Nach dem
   // Ausschalten am Handy meldet Firebase die Kennung bei der nächsten Mitteilung als abgemeldet, die Clubseite löscht
