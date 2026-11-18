@@ -273,7 +273,21 @@ if (club) {
     sehrLang.textContent = 'Das Gerät ist gerade nicht mit dem Internet verbunden. Sobald es wieder Netz hat, lädt die Seite von selbst.';
     sehrLang.hidden = false;
     knopf.hidden = false;
-    addEventListener('online', () => location.reload(), { once: true });
+    if (!wartetAufNetz) { wartetAufNetz = true; addEventListener('online', netzZurueck); }
+  };
+  // Neu geladen wird nur, solange die Clubseite nicht da ist, und erst NETZ_RUHE_MS nach der Rückkehr des Netzes
+  // (seit 18. November 2026, nach der Probe am iPhone): Nach dem Flugmodus meldet das iPhone noch einige Sekunden „kein
+  // Netz“, während die Seite schon lädt. Das sofortige Neuladen traf dann eine fertige Seite mitten in der Bedienung, und
+  // die Reiter reagierten nicht mehr.
+  const NETZ_RUHE_MS = 2000;
+  let wartetAufNetz = false;
+  const netzZurueck = () => {
+    if (bereit) { removeEventListener('online', netzZurueck); return; }
+    // Nicht in uhren: keinNetz() und gescheitert() räumen diese ab, das Neuladen soll trotzdem kommen.
+    setTimeout(() => {
+      if (bereit) removeEventListener('online', netzZurueck);
+      else if (navigator.onLine) location.reload();
+    }, NETZ_RUHE_MS);
   };
   if (!navigator.onLine) keinNetz();
   f.addEventListener('load', () => { if (!bereit) uhren.push(setTimeout(gescheitert, BEREIT_MS)); }, { once: true });
