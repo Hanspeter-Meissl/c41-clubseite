@@ -31,7 +31,9 @@ self.addEventListener('notificationclick', e => {
   const t = e.notification.tag || '';
   const chat = t === 'chat' || /^(ankuendigung|geburtstag)-/.test(t) || e.notification.title === 'Geburtstag';
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(liste => {
-    const offen = liste.find(c => c.url.startsWith(self.registration.scope));
+    // Die Test-App unter /test/ liegt im Bereich dieses Service Workers; ihr Fenster soll eine Mitteilung des Betriebs
+    // nicht nach vorn holen (E4, seit 18. November 2026).
+    const offen = liste.find(c => c.url.startsWith(self.registration.scope) && !c.url.startsWith(self.registration.scope + 'test/'));
     return offen ? offen.focus() : self.clients.openWindow(self.registration.scope + (chat ? '#&teil=chat' : ''));
   }));
 });
