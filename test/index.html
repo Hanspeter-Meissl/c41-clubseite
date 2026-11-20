@@ -452,7 +452,17 @@ if (club) {
     });
   }
   // Der Service Worker zeigt die Mitteilungen an, auch wenn die App geschlossen ist.
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  // Seit 20. November 2026 sucht er bei jedem Öffnen und jeder Rückkehr in die App nach einer neuen Fassung: Eine App am
+  // Home-Bildschirm lädt beim Zurückholen nicht neu und behielt sonst tagelang den alten Service Worker (Probe am iPhone,
+  // die Zahl am Chat-Symbol kam nicht sofort). Nachrichten des Service Workers stellt startMessages() gleich zu.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      const pruefen = () => reg.update().catch(() => {});
+      pruefen();
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pruefen(); });
+    }).catch(() => {});
+    if (navigator.serviceWorker.startMessages) navigator.serviceWorker.startMessages();
+  }
   zahlFragen();
 
   // Tippen auf eine Mitteilung bei offener App (seit 20. November 2026): Der Service Worker meldet das Ziel, die
