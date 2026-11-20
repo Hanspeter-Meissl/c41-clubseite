@@ -473,9 +473,29 @@ if (club) {
   if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => {
     const d = e.data || {};
     if (d.c41 === 'ziel' && ZIEL_MUSTER.test(d.ziel || '')) { zielOffen = d.ziel; zielSenden(); }
-    // Neue Mitteilung bei offener App: Die Clubseite fragt gleich nach, damit die Zahl am Chat-Symbol sofort stimmt.
-    if (d.c41 === 'neu' && clubFenster) { try { clubFenster.w.postMessage({ c41: 'neu' }, clubFenster.o); } catch (err) {} }
+    if (d.c41 === 'neu') neuMelden(d);
   });
+  // Neue Mitteilung bei offener App: Die Clubseite fragt gleich nach, damit die Zahl am Chat-Symbol sofort stimmt. Die
+  // Meldung kommt vom Service Worker direkt oder über den BroadcastChannel seines Bereichs; zwei Meldungen schaden nicht,
+  // die Clubseite fragt nur einmal zugleich. Die Test-App zeigt zur Fehlersuche kurz an, was ankam.
+  const TEST_APP = GERAET.indexOf('-test-') > 0;
+  const neuMelden = d => {
+    let weiter = false;
+    if (clubFenster) { try { clubFenster.w.postMessage({ c41: 'neu' }, clubFenster.o); weiter = true; } catch (err) {} }
+    if (!TEST_APP) return;
+    const hinweis = document.createElement('div');
+    hinweis.style.cssText = 'position:fixed;top:8px;left:8px;right:8px;z-index:99;padding:8px 12px;border-radius:10px;background:#B3261E;color:#fff;font:600 14px/1.3 system-ui';
+    hinweis.textContent = 'Test: Meldung über ' + (d.weg === 'kanal' ? 'Kanal' : 'Fenster') + ', ' + (Number(d.zahl) || 0) + ' Fenster gefunden, '
+      + (weiter ? 'an Clubseite weitergegeben' : 'Clubseite unbekannt');
+    document.body.appendChild(hinweis);
+    setTimeout(() => hinweis.remove(), 6000);
+  };
+  if (window.BroadcastChannel) {
+    new BroadcastChannel('c41:' + new URL('./', location.href).href).onmessage = e => {
+      const d = e.data || {};
+      if (d.c41 === 'neu') neuMelden(d);
+    };
+  }
 
   addEventListener('message', e => {
     if (!HERKUNFT.test(e.origin) || !ausDemRahmen(e.source)) return;

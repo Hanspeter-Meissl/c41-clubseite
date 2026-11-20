@@ -21,9 +21,17 @@ self.addEventListener('push', e => {
   // Ist die App offen, erfährt sie sofort von der Mitteilung und holt das Neue (seit 20. November 2026). Sonst kam die
   // Zahl am Chat-Symbol erst mit der nächsten Abfrage, außerhalb des Chats bis zu einer Minute später. Fenster der
   // Test-App unter /test/ bekommen die Meldung des Betriebs nicht.
-  arbeit.push(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(liste => liste
-    .filter(c => c.url.startsWith(self.registration.scope) && !c.url.startsWith(self.registration.scope + 'test/'))
-    .forEach(c => c.postMessage({ c41: 'neu' }))).catch(() => {}));
+  // Zweiter Weg über einen BroadcastChannel je Bereich des Service Workers, falls das iPhone die Fenster hier nicht
+  // liefert (Probe am iPhone vom 20. November 2026: Mitteilung kam, Zahl nicht). „zahl“ ist die Zahl gefundener Fenster.
+  arbeit.push(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(liste => {
+    const fenster = liste.filter(c => c.url.startsWith(self.registration.scope) && !c.url.startsWith(self.registration.scope + 'test/'));
+    fenster.forEach(c => c.postMessage({ c41: 'neu', weg: 'fenster', zahl: fenster.length }));
+    if (self.BroadcastChannel) {
+      const kanal = new BroadcastChannel('c41:' + self.registration.scope);
+      kanal.postMessage({ c41: 'neu', weg: 'kanal', zahl: fenster.length });
+      kanal.close();
+    }
+  }).catch(() => {}));
   if (zahl !== null && !Number.isNaN(zahl) && self.navigator.setAppBadge) {
     arbeit.push((zahl ? self.navigator.setAppBadge(zahl) : self.navigator.clearAppBadge()).catch(() => {}));
   }
