@@ -170,6 +170,10 @@ const teil = new URLSearchParams(teile.slice(1).join('&')).get('teil');
 const zusatz = new URLSearchParams(teile.slice(1).join('&'));
 const formular = /^[a-z0-9][a-z0-9-]{0,39}$/.test(zusatz.get('f') || '') ? zusatz.get('f') : '';
 const kennung = /^Nr\. \d{1,4} [^<>&#]{1,40}$/.test(zusatz.get('m') || '') ? zusatz.get('m') : '';
+// Ziel einer Mitteilung (seit 20. November 2026): „#&teil=chat&ziel=club:17“ führt im Chat zu dieser Nachricht.
+// Die Clubseite prüft das Ziel selbst noch einmal.
+const ZIEL_MUSTER = /^(?:(?:club|ankuendigung|fotos):\d{1,6}|direkt:[\w-]{1,40}:\d{1,6}|geburtstage)$/;
+const ziel = ZIEL_MUSTER.test(zusatz.get('ziel') || '') ? zusatz.get('ziel') : '';
 
 if (club) {
   speichern(club);
@@ -298,11 +302,14 @@ if (club) {
     const push = geraet && gespeichert(PUSH);
     return GOOGLE + '?club=' + encodeURIComponent(club) + (teil ? '&teil=' + encodeURIComponent(teil) : '')
       + (formular && kennung ? '&f=' + encodeURIComponent(formular) + '&m=' + encodeURIComponent(kennung) : '')
+      + (ziel ? '&ziel=' + encodeURIComponent(ziel) : '')
       + (geraet ? '&ich=' + encodeURIComponent(geraet) : '') + (push ? '&push=' + encodeURIComponent(push) : '')
       + (geraet ? '&art=' + encodeURIComponent(geraetArt(navigator, screen, devicePixelRatio, gespeichert(MODELL))) : '');
   };
   f.src = adresse();
   document.body.appendChild(f);
+  // Das Ziel gilt nur einmal; ein späteres Neuladen öffnet wieder den Chat ohne Sprung.
+  if (ziel) history.replaceState(null, '', '#' + teile[0] + '&teil=' + encodeURIComponent(teil || 'chat'));
   if (ANDROID && navigator.userAgentData && gespeichert(GERAET) && !gespeichert(MODELL)) {
     navigator.userAgentData.getHighEntropyValues(['model']).then(w => { if (w.model) speichern(w.model, MODELL); }, () => {});
   }
@@ -445,9 +452,23 @@ if (club) {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   zahlFragen();
 
+  // Tippen auf eine Mitteilung bei offener App (seit 20. November 2026): Der Service Worker meldet das Ziel, die
+  // Einstiegsseite reicht es an die Clubseite weiter. Hat sich die Clubseite noch nicht gemeldet, wartet das Ziel.
+  let clubFenster = null;
+  let zielOffen = '';
+  const zielSenden = () => {
+    if (!zielOffen || !clubFenster) return;
+    try { clubFenster.w.postMessage({ c41: 'ziel', ziel: zielOffen }, clubFenster.o); zielOffen = ''; } catch (err) {}
+  };
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => {
+    const d = e.data || {};
+    if (d.c41 === 'ziel' && ZIEL_MUSTER.test(d.ziel || '')) { zielOffen = d.ziel; zielSenden(); }
+  });
+
   addEventListener('message', e => {
     if (!HERKUNFT.test(e.origin) || !ausDemRahmen(e.source)) return;
     const d = e.data || {};
+    if (d.c41) { clubFenster = { w: e.source, o: e.origin }; zielSenden(); }
     if (d.c41 === 'bereit') fertig();
     else if (d.c41 === 'anmelden' && /^[0-9a-f-]{36}$/.test(d.geraet)) { speichern(d.geraet, GERAET); pushHolen(true); zahlFragen(); }
     else if (d.c41 === 'abmelden') { vergessen(GERAET); pushWeg(); zahlWeg(); location.reload(); }

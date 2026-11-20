@@ -14,6 +14,8 @@ self.addEventListener('push', e => {
   const art = { body: inhalt.text || '', icon: 'bilder/symbol-192.png' };
   // „leise“ (etwa der fünfte Glückwunsch) ersetzt die vorige ohne Ton.
   if (inhalt.tag) { art.tag = inhalt.tag; art.renotify = inhalt.leise !== '1'; }
+  // „ziel“ (seit 20. November 2026): wohin ein Tippen führt, etwa „club:17“; bleibt bei der Mitteilung bis zum Tippen.
+  if (inhalt.ziel) art.data = { ziel: String(inhalt.ziel) };
   // iOS entzieht die Erlaubnis, wenn auf eine Mitteilung hin nichts angezeigt wird; deshalb immer anzeigen.
   const arbeit = [self.registration.showNotification(inhalt.titel || 'Club 41', art)];
   if (zahl !== null && !Number.isNaN(zahl) && self.navigator.setAppBadge) {
@@ -24,15 +26,21 @@ self.addEventListener('push', e => {
 
 // Ein Tippen auf die Mitteilung öffnet die App; der Clubschlüssel kommt aus dem Speicher der Einstiegsseite.
 // Clubchat, Ankündigung und Geburtstag öffnen den Reiter „Chat“ („#&teil=chat“, ohne Schlüssel in der Adresse).
-// Ist die App schon offen, kommt sie nur nach vorn; sie holt das Neue dann von selbst.
+// Ist die App schon offen, kommt sie nach vorn; sie holt das Neue dann von selbst. Seit 20. November 2026 führt das
+// Ziel der Mitteilung zur Nachricht: bei geschlossener App über „#&teil=chat&ziel=…“, bei offener App über eine
+// Nachricht an das Fenster, die die Einstiegsseite an die Clubseite weiterreicht.
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   const t = e.notification.tag || '';
+  const ziel = (e.notification.data && e.notification.data.ziel) || '';
   const chat = t === 'chat' || /^(ankuendigung|geburtstag)-/.test(t) || e.notification.title === 'Geburtstag';
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(liste => {
     // Die Test-App unter /test/ liegt im Bereich dieses Service Workers; ihr Fenster soll eine Mitteilung des Betriebs
     // nicht nach vorn holen (E4, seit 18. November 2026).
     const offen = liste.find(c => c.url.startsWith(self.registration.scope) && !c.url.startsWith(self.registration.scope + 'test/'));
-    return offen ? offen.focus() : self.clients.openWindow(self.registration.scope + (chat ? '#&teil=chat' : ''));
+    if (offen) {
+      return Promise.resolve(offen.focus()).catch(() => offen).then(c => { if (ziel) (c || offen).postMessage({ c41: 'ziel', ziel: ziel }); });
+    }
+    return self.clients.openWindow(self.registration.scope + (ziel ? '#&teil=chat&ziel=' + encodeURIComponent(ziel) : chat ? '#&teil=chat' : ''));
   }));
 });
