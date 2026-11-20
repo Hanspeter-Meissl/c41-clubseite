@@ -463,6 +463,8 @@ if (club) {
   if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => {
     const d = e.data || {};
     if (d.c41 === 'ziel' && ZIEL_MUSTER.test(d.ziel || '')) { zielOffen = d.ziel; zielSenden(); }
+    // Neue Mitteilung bei offener App: Die Clubseite fragt gleich nach, damit die Zahl am Chat-Symbol sofort stimmt.
+    if (d.c41 === 'neu' && clubFenster) { try { clubFenster.w.postMessage({ c41: 'neu' }, clubFenster.o); } catch (err) {} }
   });
 
   addEventListener('message', e => {

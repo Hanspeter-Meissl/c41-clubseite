@@ -18,6 +18,12 @@ self.addEventListener('push', e => {
   if (inhalt.ziel) art.data = { ziel: String(inhalt.ziel) };
   // iOS entzieht die Erlaubnis, wenn auf eine Mitteilung hin nichts angezeigt wird; deshalb immer anzeigen.
   const arbeit = [self.registration.showNotification(inhalt.titel || 'Club 41', art)];
+  // Ist die App offen, erfährt sie sofort von der Mitteilung und holt das Neue (seit 20. November 2026). Sonst kam die
+  // Zahl am Chat-Symbol erst mit der nächsten Abfrage, außerhalb des Chats bis zu einer Minute später. Fenster der
+  // Test-App unter /test/ bekommen die Meldung des Betriebs nicht.
+  arbeit.push(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(liste => liste
+    .filter(c => c.url.startsWith(self.registration.scope) && !c.url.startsWith(self.registration.scope + 'test/'))
+    .forEach(c => c.postMessage({ c41: 'neu' }))).catch(() => {}));
   if (zahl !== null && !Number.isNaN(zahl) && self.navigator.setAppBadge) {
     arbeit.push((zahl ? self.navigator.setAppBadge(zahl) : self.navigator.clearAppBadge()).catch(() => {}));
   }
