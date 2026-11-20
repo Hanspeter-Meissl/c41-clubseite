@@ -17,7 +17,20 @@ self.addEventListener('push', e => {
   // „ziel“ (seit 20. November 2026): wohin ein Tippen führt, etwa „club:17“; bleibt bei der Mitteilung bis zum Tippen.
   if (inhalt.ziel) art.data = { ziel: String(inhalt.ziel) };
   // iOS entzieht die Erlaubnis, wenn auf eine Mitteilung hin nichts angezeigt wird; deshalb immer anzeigen.
+  // Neue Mitteilung bei offener App (seit 20. November 2026): Die App erfährt sofort davon und holt das Neue; sonst kam
+  // die Zahl am Chat-Symbol erst mit der nächsten Abfrage. Zwei Wege: an jedes Fenster dieses Bereichs und über einen
+  // BroadcastChannel. Fenster der Test-App unter /test/ bekommen die Meldung des Betriebs nicht. Am iPhone findet der
+  // Service Worker hier kein Fenster; dort sieht die App selbst nach (getNotifications in index.html).
   const arbeit = [self.registration.showNotification(inhalt.titel || 'Club 41', art)];
+  arbeit.push(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(liste => {
+    liste.filter(c => c.url.startsWith(self.registration.scope) && !c.url.startsWith(self.registration.scope + 'test/'))
+      .forEach(c => c.postMessage({ c41: 'neu' }));
+    if (self.BroadcastChannel) {
+      const kanal = new BroadcastChannel('c41:' + self.registration.scope);
+      kanal.postMessage({ c41: 'neu' });
+      kanal.close();
+    }
+  }).catch(() => {}));
   if (zahl !== null && !Number.isNaN(zahl) && self.navigator.setAppBadge) {
     arbeit.push((zahl ? self.navigator.setAppBadge(zahl) : self.navigator.clearAppBadge()).catch(() => {}));
   }

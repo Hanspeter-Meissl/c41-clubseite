@@ -444,7 +444,17 @@ if (club) {
     });
   }
   // Der Service Worker zeigt die Mitteilungen an, auch wenn die App geschlossen ist.
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  // Seit 20. November 2026 sucht er bei jedem Öffnen und jeder Rückkehr in die App nach einer neuen Fassung: Eine App am
+  // Home-Bildschirm lädt beim Zurückholen nicht neu und behielt sonst tagelang den alten Service Worker (Probe am iPhone,
+  // die Zahl am Chat-Symbol kam nicht sofort). Nachrichten des Service Workers stellt startMessages() gleich zu.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      const pruefen = () => reg.update().catch(() => {});
+      pruefen();
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pruefen(); });
+    }).catch(() => {});
+    if (navigator.serviceWorker.startMessages) navigator.serviceWorker.startMessages();
+  }
   zahlFragen();
 
   // Tippen auf eine Mitteilung bei offener App (seit 20. November 2026): Der Service Worker meldet das Ziel, die
@@ -458,7 +468,39 @@ if (club) {
   if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => {
     const d = e.data || {};
     if (d.c41 === 'ziel' && ZIEL_MUSTER.test(d.ziel || '')) { zielOffen = d.ziel; zielSenden(); }
+    if (d.c41 === 'neu') neuMelden(d);
   });
+  // Neue Mitteilung bei offener App: Die Clubseite fragt gleich nach, damit die Zahl am Chat-Symbol sofort stimmt. Die
+  // Meldung kommt vom Service Worker direkt, über den BroadcastChannel seines Bereichs oder aus dem Blick auf die
+  // angezeigten Mitteilungen; mehrere Meldungen schaden nicht, die Clubseite fragt nur einmal zugleich.
+  const neuMelden = () => {
+    if (clubFenster) { try { clubFenster.w.postMessage({ c41: 'neu' }, clubFenster.o); } catch (err) {} }
+  };
+  if (window.BroadcastChannel) {
+    new BroadcastChannel('c41:' + new URL('./', location.href).href).onmessage = e => {
+      const d = e.data || {};
+      if (d.c41 === 'neu') neuMelden(d);
+    };
+  }
+  // Dritter Weg (seit 20. November 2026, Probe am iPhone): Dort findet der Service Worker beim Eintreffen einer
+  // Mitteilung kein Fenster (Fehlersuche: 0 von 0 Fenstern), die App erfährt also nichts. Deshalb sieht die offene App selbst alle drei
+  // Sekunden nach, welche Mitteilungen angezeigt werden (getNotifications, nur am Gerät, ohne Server). Ist eine neue
+  // dazugekommen, fragt die Clubseite gleich. Der erste Blick merkt nur den Bestand.
+  if ('serviceWorker' in navigator) {
+    let gesehen = null;
+    const listePruefen = () => {
+      if (document.visibilityState !== 'visible') return;
+      navigator.serviceWorker.getRegistration().then(reg => (reg && reg.getNotifications ? reg.getNotifications() : null)).then(liste => {
+        if (!liste) return;
+        const jetzt = new Set(liste.map(n => [n.tag, n.title, n.body].join('|')));
+        const neu = gesehen !== null && Array.from(jetzt).some(k => !gesehen.has(k));
+        gesehen = jetzt;
+        if (neu) neuMelden();
+      }).catch(() => {});
+    };
+    listePruefen();
+    setInterval(listePruefen, 3000);
+  }
 
   addEventListener('message', e => {
     if (!HERKUNFT.test(e.origin) || !ausDemRahmen(e.source)) return;
