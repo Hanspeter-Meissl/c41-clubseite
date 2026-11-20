@@ -23,7 +23,7 @@ self.addEventListener('push', e => {
   // BroadcastChannel. Fenster der Test-App unter /test/ bekommen die Meldung des Betriebs nicht. Die Mitteilung kommt
   // in jedem Fall, auch wenn die Suche nach Fenstern scheitert. Zur Fehlersuche trägt in der Test-App der Titel, wie viele
   // Fenster gefunden wurden und ob das erste sichtbar ist.
-  const SW_STAND = '4';
+  const SW_STAND = '5';
   const test = /\/test\/$/.test(self.registration.scope);
   const anzeigen = zusatz => self.registration.showNotification((inhalt.titel || 'Club 41') + (test ? ' [SW ' + SW_STAND + zusatz + ']' : ''), art);
   const arbeit = [self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(liste => {
