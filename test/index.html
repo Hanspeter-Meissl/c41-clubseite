@@ -490,8 +490,20 @@ if (club) {
     document.body.appendChild(hinweis);
     setTimeout(() => hinweis.remove(), 6000);
   };
-  // Stand der Einstiegsseite, damit am iPhone zu sehen ist, ob die neue Fassung geladen ist (nur Test-App).
-  testHinweis('Test: Einstiegsseite Stand 3');
+  // Stand der Einstiegsseite und Probe des Rückwegs vom Service Worker (nur Test-App): „ping“ an den Service Worker,
+  // nach zwei Sekunden zeigt der Hinweis, ob die Seite gesteuert ist und welche Antwort ankam.
+  if (TEST_APP && 'serviceWorker' in navigator) {
+    const antwort = { fenster: false, kanal: false };
+    navigator.serviceWorker.addEventListener('message', e => { if ((e.data || {}).c41 === 'pong') antwort.fenster = true; });
+    if (window.BroadcastChannel) {
+      new BroadcastChannel('c41:' + new URL('./', location.href).href).addEventListener('message', e => { if ((e.data || {}).c41 === 'pong') antwort.kanal = true; });
+    }
+    navigator.serviceWorker.ready.then(reg => {
+      (navigator.serviceWorker.controller || reg.active).postMessage({ c41: 'ping' });
+      setTimeout(() => testHinweis('Test: Stand 4, gesteuert ' + (navigator.serviceWorker.controller ? 'ja' : 'nein') + ', Antwort Fenster '
+        + (antwort.fenster ? 'ja' : 'nein') + ', Kanal ' + (antwort.kanal ? 'ja' : 'nein')), 2000);
+    });
+  }
   const neuMelden = d => {
     let weiter = false;
     if (clubFenster) { try { clubFenster.w.postMessage({ c41: 'neu' }, clubFenster.o); weiter = true; } catch (err) {} }

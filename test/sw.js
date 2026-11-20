@@ -18,17 +18,15 @@ self.addEventListener('push', e => {
   // „ziel“ (seit 20. November 2026): wohin ein Tippen führt, etwa „club:17“; bleibt bei der Mitteilung bis zum Tippen.
   if (inhalt.ziel) art.data = { ziel: String(inhalt.ziel) };
   // iOS entzieht die Erlaubnis, wenn auf eine Mitteilung hin nichts angezeigt wird; deshalb immer anzeigen.
-  // Fehlersuche (20. November 2026): In der Test-App trägt der Titel den Stand des Service Workers, damit am iPhone zu
-  // sehen ist, ob der neue schon läuft. Die App des Betriebs zeigt den Titel unverändert.
-  const SW_STAND = '3';
-  const titel = (inhalt.titel || 'Club 41') + (/\/test\/$/.test(self.registration.scope) ? ' [SW ' + SW_STAND + ']' : '');
-  const arbeit = [self.registration.showNotification(titel, art)];
-  // Ist die App offen, erfährt sie sofort von der Mitteilung und holt das Neue (seit 20. November 2026). Sonst kam die
-  // Zahl am Chat-Symbol erst mit der nächsten Abfrage, außerhalb des Chats bis zu einer Minute später. Fenster der
-  // Test-App unter /test/ bekommen die Meldung des Betriebs nicht.
-  // Zweiter Weg über einen BroadcastChannel je Bereich des Service Workers, falls das iPhone die Fenster hier nicht
-  // liefert (Probe am iPhone vom 20. November 2026: Mitteilung kam, Zahl nicht). „zahl“ ist die Zahl gefundener Fenster.
-  arbeit.push(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(liste => {
+  // Neue Mitteilung bei offener App (seit 20. November 2026): Die App erfährt sofort davon und holt das Neue; sonst kam
+  // die Zahl am Chat-Symbol erst mit der nächsten Abfrage. Zwei Wege: an jedes Fenster dieses Bereichs und über einen
+  // BroadcastChannel. Fenster der Test-App unter /test/ bekommen die Meldung des Betriebs nicht. Die Mitteilung kommt
+  // in jedem Fall, auch wenn die Suche nach Fenstern scheitert. Zur Fehlersuche trägt in der Test-App der Titel, wie viele
+  // Fenster gefunden wurden und ob das erste sichtbar ist.
+  const SW_STAND = '4';
+  const test = /\/test\/$/.test(self.registration.scope);
+  const anzeigen = zusatz => self.registration.showNotification((inhalt.titel || 'Club 41') + (test ? ' [SW ' + SW_STAND + zusatz + ']' : ''), art);
+  const arbeit = [self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(liste => {
     const fenster = liste.filter(c => c.url.startsWith(self.registration.scope) && !c.url.startsWith(self.registration.scope + 'test/'));
     fenster.forEach(c => c.postMessage({ c41: 'neu', weg: 'fenster', zahl: fenster.length }));
     if (self.BroadcastChannel) {
@@ -36,11 +34,25 @@ self.addEventListener('push', e => {
       kanal.postMessage({ c41: 'neu', weg: 'kanal', zahl: fenster.length });
       kanal.close();
     }
-  }).catch(() => {}));
+    return anzeigen(' · ' + liste.length + '/' + fenster.length + (fenster[0] ? ' ' + (fenster[0].visibilityState || '?') : ''));
+  }, () => anzeigen(' · Suche gescheitert'))];
   if (zahl !== null && !Number.isNaN(zahl) && self.navigator.setAppBadge) {
     arbeit.push((zahl ? self.navigator.setAppBadge(zahl) : self.navigator.clearAppBadge()).catch(() => {}));
   }
   e.waitUntil(Promise.all(arbeit));
+});
+
+// Fehlersuche (20. November 2026): Die Test-App fragt beim Öffnen mit „ping“, ob Nachrichten des Service Workers
+// ankommen; er antwortet auf beiden Wegen.
+self.addEventListener('message', e => {
+  const d = e.data || {};
+  if (d.c41 !== 'ping') return;
+  if (e.source) e.source.postMessage({ c41: 'pong', weg: 'fenster' });
+  if (self.BroadcastChannel) {
+    const kanal = new BroadcastChannel('c41:' + self.registration.scope);
+    kanal.postMessage({ c41: 'pong', weg: 'kanal' });
+    kanal.close();
+  }
 });
 
 // Ein Tippen auf die Mitteilung öffnet die App; der Clubschlüssel kommt aus dem Speicher der Einstiegsseite.
