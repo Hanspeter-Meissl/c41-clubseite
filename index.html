@@ -497,14 +497,14 @@ if (club) {
     }
     navigator.serviceWorker.ready.then(reg => {
       (navigator.serviceWorker.controller || reg.active).postMessage({ c41: 'ping' });
-      setTimeout(() => testHinweis('Test: Stand 4, gesteuert ' + (navigator.serviceWorker.controller ? 'ja' : 'nein') + ', Antwort Fenster '
+      setTimeout(() => testHinweis('Test: Stand 5, gesteuert ' + (navigator.serviceWorker.controller ? 'ja' : 'nein') + ', Antwort Fenster '
         + (antwort.fenster ? 'ja' : 'nein') + ', Kanal ' + (antwort.kanal ? 'ja' : 'nein')), 2000);
     });
   }
   const neuMelden = d => {
     let weiter = false;
     if (clubFenster) { try { clubFenster.w.postMessage({ c41: 'neu' }, clubFenster.o); weiter = true; } catch (err) {} }
-    testHinweis('Test: Meldung über ' + (d.weg === 'kanal' ? 'Kanal' : 'Fenster') + ', ' + (Number(d.zahl) || 0) + ' Fenster gefunden, '
+    testHinweis('Test: Meldung über ' + (d.weg === 'kanal' ? 'Kanal' : d.weg === 'liste' ? 'Liste' : 'Fenster') + ', Zahl ' + (Number(d.zahl) || 0) + ', '
       + (weiter ? 'an Clubseite weitergegeben' : 'Clubseite unbekannt'));
   };
   if (window.BroadcastChannel) {
@@ -512,6 +512,25 @@ if (club) {
       const d = e.data || {};
       if (d.c41 === 'neu') neuMelden(d);
     };
+  }
+  // Dritter Weg (seit 20. November 2026, Probe am iPhone): Dort findet der Service Worker beim Eintreffen einer
+  // Mitteilung kein Fenster („[SW 4 · 0/0]“), die App erfährt also nichts. Deshalb sieht die offene App selbst alle drei
+  // Sekunden nach, welche Mitteilungen angezeigt werden (getNotifications, nur am Gerät, ohne Server). Ist eine neue
+  // dazugekommen, fragt die Clubseite gleich. Der erste Blick merkt nur den Bestand.
+  if ('serviceWorker' in navigator) {
+    let gesehen = null;
+    const listePruefen = () => {
+      if (document.visibilityState !== 'visible') return;
+      navigator.serviceWorker.getRegistration().then(reg => (reg && reg.getNotifications ? reg.getNotifications() : null)).then(liste => {
+        if (!liste) return;
+        const jetzt = new Set(liste.map(n => [n.tag, n.title, n.body].join('|')));
+        const neu = gesehen !== null && Array.from(jetzt).some(k => !gesehen.has(k));
+        gesehen = jetzt;
+        if (neu) neuMelden({ weg: 'liste', zahl: liste.length });
+      }).catch(() => {});
+    };
+    listePruefen();
+    setInterval(listePruefen, 3000);
   }
 
   addEventListener('message', e => {
