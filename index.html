@@ -476,36 +476,10 @@ if (club) {
     if (d.c41 === 'neu') neuMelden(d);
   });
   // Neue Mitteilung bei offener App: Die Clubseite fragt gleich nach, damit die Zahl am Chat-Symbol sofort stimmt. Die
-  // Meldung kommt vom Service Worker direkt oder über den BroadcastChannel seines Bereichs; zwei Meldungen schaden nicht,
-  // die Clubseite fragt nur einmal zugleich. Die Test-App zeigt zur Fehlersuche kurz an, was ankam.
-  const TEST_APP = GERAET.indexOf('-test-') > 0;
-  const testHinweis = text => {
-    if (!TEST_APP) return;
-    const hinweis = document.createElement('div');
-    hinweis.style.cssText = 'position:fixed;top:8px;left:8px;right:8px;z-index:99;padding:8px 12px;border-radius:10px;background:#B3261E;color:#fff;font:600 14px/1.3 system-ui';
-    hinweis.textContent = text;
-    document.body.appendChild(hinweis);
-    setTimeout(() => hinweis.remove(), 6000);
-  };
-  // Stand der Einstiegsseite und Probe des Rückwegs vom Service Worker (nur Test-App): „ping“ an den Service Worker,
-  // nach zwei Sekunden zeigt der Hinweis, ob die Seite gesteuert ist und welche Antwort ankam.
-  if (TEST_APP && 'serviceWorker' in navigator) {
-    const antwort = { fenster: false, kanal: false };
-    navigator.serviceWorker.addEventListener('message', e => { if ((e.data || {}).c41 === 'pong') antwort.fenster = true; });
-    if (window.BroadcastChannel) {
-      new BroadcastChannel('c41:' + new URL('./', location.href).href).addEventListener('message', e => { if ((e.data || {}).c41 === 'pong') antwort.kanal = true; });
-    }
-    navigator.serviceWorker.ready.then(reg => {
-      (navigator.serviceWorker.controller || reg.active).postMessage({ c41: 'ping' });
-      setTimeout(() => testHinweis('Test: Stand 5, gesteuert ' + (navigator.serviceWorker.controller ? 'ja' : 'nein') + ', Antwort Fenster '
-        + (antwort.fenster ? 'ja' : 'nein') + ', Kanal ' + (antwort.kanal ? 'ja' : 'nein')), 2000);
-    });
-  }
-  const neuMelden = d => {
-    let weiter = false;
-    if (clubFenster) { try { clubFenster.w.postMessage({ c41: 'neu' }, clubFenster.o); weiter = true; } catch (err) {} }
-    testHinweis('Test: Meldung über ' + (d.weg === 'kanal' ? 'Kanal' : d.weg === 'liste' ? 'Liste' : 'Fenster') + ', Zahl ' + (Number(d.zahl) || 0) + ', '
-      + (weiter ? 'an Clubseite weitergegeben' : 'Clubseite unbekannt'));
+  // Meldung kommt vom Service Worker direkt, über den BroadcastChannel seines Bereichs oder aus dem Blick auf die
+  // angezeigten Mitteilungen; mehrere Meldungen schaden nicht, die Clubseite fragt nur einmal zugleich.
+  const neuMelden = () => {
+    if (clubFenster) { try { clubFenster.w.postMessage({ c41: 'neu' }, clubFenster.o); } catch (err) {} }
   };
   if (window.BroadcastChannel) {
     new BroadcastChannel('c41:' + new URL('./', location.href).href).onmessage = e => {
@@ -514,7 +488,7 @@ if (club) {
     };
   }
   // Dritter Weg (seit 20. November 2026, Probe am iPhone): Dort findet der Service Worker beim Eintreffen einer
-  // Mitteilung kein Fenster („[SW 4 · 0/0]“), die App erfährt also nichts. Deshalb sieht die offene App selbst alle drei
+  // Mitteilung kein Fenster (Fehlersuche: 0 von 0 Fenstern), die App erfährt also nichts. Deshalb sieht die offene App selbst alle drei
   // Sekunden nach, welche Mitteilungen angezeigt werden (getNotifications, nur am Gerät, ohne Server). Ist eine neue
   // dazugekommen, fragt die Clubseite gleich. Der erste Blick merkt nur den Bestand.
   if ('serviceWorker' in navigator) {
@@ -526,7 +500,7 @@ if (club) {
         const jetzt = new Set(liste.map(n => [n.tag, n.title, n.body].join('|')));
         const neu = gesehen !== null && Array.from(jetzt).some(k => !gesehen.has(k));
         gesehen = jetzt;
-        if (neu) neuMelden({ weg: 'liste', zahl: liste.length });
+        if (neu) neuMelden();
       }).catch(() => {});
     };
     listePruefen();

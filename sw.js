@@ -19,39 +19,22 @@ self.addEventListener('push', e => {
   // iOS entzieht die Erlaubnis, wenn auf eine Mitteilung hin nichts angezeigt wird; deshalb immer anzeigen.
   // Neue Mitteilung bei offener App (seit 20. November 2026): Die App erfährt sofort davon und holt das Neue; sonst kam
   // die Zahl am Chat-Symbol erst mit der nächsten Abfrage. Zwei Wege: an jedes Fenster dieses Bereichs und über einen
-  // BroadcastChannel. Fenster der Test-App unter /test/ bekommen die Meldung des Betriebs nicht. Die Mitteilung kommt
-  // in jedem Fall, auch wenn die Suche nach Fenstern scheitert. Zur Fehlersuche trägt in der Test-App der Titel, wie viele
-  // Fenster gefunden wurden und ob das erste sichtbar ist.
-  const SW_STAND = '5';
-  const test = /\/test\/$/.test(self.registration.scope);
-  const anzeigen = zusatz => self.registration.showNotification((inhalt.titel || 'Club 41') + (test ? ' [SW ' + SW_STAND + zusatz + ']' : ''), art);
-  const arbeit = [self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(liste => {
-    const fenster = liste.filter(c => c.url.startsWith(self.registration.scope) && !c.url.startsWith(self.registration.scope + 'test/'));
-    fenster.forEach(c => c.postMessage({ c41: 'neu', weg: 'fenster', zahl: fenster.length }));
+  // BroadcastChannel. Fenster der Test-App unter /test/ bekommen die Meldung des Betriebs nicht. Am iPhone findet der
+  // Service Worker hier kein Fenster; dort sieht die App selbst nach (getNotifications in index.html).
+  const arbeit = [self.registration.showNotification(inhalt.titel || 'Club 41', art)];
+  arbeit.push(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(liste => {
+    liste.filter(c => c.url.startsWith(self.registration.scope) && !c.url.startsWith(self.registration.scope + 'test/'))
+      .forEach(c => c.postMessage({ c41: 'neu' }));
     if (self.BroadcastChannel) {
       const kanal = new BroadcastChannel('c41:' + self.registration.scope);
-      kanal.postMessage({ c41: 'neu', weg: 'kanal', zahl: fenster.length });
+      kanal.postMessage({ c41: 'neu' });
       kanal.close();
     }
-    return anzeigen(' · ' + liste.length + '/' + fenster.length + (fenster[0] ? ' ' + (fenster[0].visibilityState || '?') : ''));
-  }, () => anzeigen(' · Suche gescheitert'))];
+  }).catch(() => {}));
   if (zahl !== null && !Number.isNaN(zahl) && self.navigator.setAppBadge) {
     arbeit.push((zahl ? self.navigator.setAppBadge(zahl) : self.navigator.clearAppBadge()).catch(() => {}));
   }
   e.waitUntil(Promise.all(arbeit));
-});
-
-// Fehlersuche (20. November 2026): Die Test-App fragt beim Öffnen mit „ping“, ob Nachrichten des Service Workers
-// ankommen; er antwortet auf beiden Wegen.
-self.addEventListener('message', e => {
-  const d = e.data || {};
-  if (d.c41 !== 'ping') return;
-  if (e.source) e.source.postMessage({ c41: 'pong', weg: 'fenster' });
-  if (self.BroadcastChannel) {
-    const kanal = new BroadcastChannel('c41:' + self.registration.scope);
-    kanal.postMessage({ c41: 'pong', weg: 'kanal' });
-    kanal.close();
-  }
 });
 
 // Ein Tippen auf die Mitteilung öffnet die App; der Clubschlüssel kommt aus dem Speicher der Einstiegsseite.
