@@ -18,7 +18,11 @@ self.addEventListener('push', e => {
   // „ziel“ (seit 20. November 2026): wohin ein Tippen führt, etwa „club:17“; bleibt bei der Mitteilung bis zum Tippen.
   if (inhalt.ziel) art.data = { ziel: String(inhalt.ziel) };
   // iOS entzieht die Erlaubnis, wenn auf eine Mitteilung hin nichts angezeigt wird; deshalb immer anzeigen.
-  const arbeit = [self.registration.showNotification(inhalt.titel || 'Club 41', art)];
+  // Fehlersuche (20. November 2026): In der Test-App trägt der Titel den Stand des Service Workers, damit am iPhone zu
+  // sehen ist, ob der neue schon läuft. Die App des Betriebs zeigt den Titel unverändert.
+  const SW_STAND = '3';
+  const titel = (inhalt.titel || 'Club 41') + (/\/test\/$/.test(self.registration.scope) ? ' [SW ' + SW_STAND + ']' : '');
+  const arbeit = [self.registration.showNotification(titel, art)];
   // Ist die App offen, erfährt sie sofort von der Mitteilung und holt das Neue (seit 20. November 2026). Sonst kam die
   // Zahl am Chat-Symbol erst mit der nächsten Abfrage, außerhalb des Chats bis zu einer Minute später. Fenster der
   // Test-App unter /test/ bekommen die Meldung des Betriebs nicht.

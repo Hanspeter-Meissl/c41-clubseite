@@ -482,16 +482,21 @@ if (club) {
   // Meldung kommt vom Service Worker direkt oder über den BroadcastChannel seines Bereichs; zwei Meldungen schaden nicht,
   // die Clubseite fragt nur einmal zugleich. Die Test-App zeigt zur Fehlersuche kurz an, was ankam.
   const TEST_APP = GERAET.indexOf('-test-') > 0;
-  const neuMelden = d => {
-    let weiter = false;
-    if (clubFenster) { try { clubFenster.w.postMessage({ c41: 'neu' }, clubFenster.o); weiter = true; } catch (err) {} }
+  const testHinweis = text => {
     if (!TEST_APP) return;
     const hinweis = document.createElement('div');
     hinweis.style.cssText = 'position:fixed;top:8px;left:8px;right:8px;z-index:99;padding:8px 12px;border-radius:10px;background:#B3261E;color:#fff;font:600 14px/1.3 system-ui';
-    hinweis.textContent = 'Test: Meldung über ' + (d.weg === 'kanal' ? 'Kanal' : 'Fenster') + ', ' + (Number(d.zahl) || 0) + ' Fenster gefunden, '
-      + (weiter ? 'an Clubseite weitergegeben' : 'Clubseite unbekannt');
+    hinweis.textContent = text;
     document.body.appendChild(hinweis);
     setTimeout(() => hinweis.remove(), 6000);
+  };
+  // Stand der Einstiegsseite, damit am iPhone zu sehen ist, ob die neue Fassung geladen ist (nur Test-App).
+  testHinweis('Test: Einstiegsseite Stand 3');
+  const neuMelden = d => {
+    let weiter = false;
+    if (clubFenster) { try { clubFenster.w.postMessage({ c41: 'neu' }, clubFenster.o); weiter = true; } catch (err) {} }
+    testHinweis('Test: Meldung über ' + (d.weg === 'kanal' ? 'Kanal' : 'Fenster') + ', ' + (Number(d.zahl) || 0) + ' Fenster gefunden, '
+      + (weiter ? 'an Clubseite weitergegeben' : 'Clubseite unbekannt'));
   };
   if (window.BroadcastChannel) {
     new BroadcastChannel('c41:' + new URL('./', location.href).href).onmessage = e => {
